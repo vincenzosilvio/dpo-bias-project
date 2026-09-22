@@ -1,0 +1,11 @@
+transformers>=4.44.0
+trl>=0.10.1
+datasets>=2.20.0
+accelerate>=0.33.0
+peft>=0.12.0
+bitsandbytes>=0.43.0
+torch>=2.3.0
+sentencepiece
+scikit-learn
+pandas
+tqdm
