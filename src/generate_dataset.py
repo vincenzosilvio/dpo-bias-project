@@ -55,6 +55,7 @@ def main():
     args = parse_args()
 
     import torch
+    import transformers
     from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 
     set_seed(args.seed)
@@ -62,10 +63,13 @@ def main():
 
     print(f"Loading {args.model} ...")
     tokenizer = AutoTokenizer.from_pretrained(args.model)
+    # bf16 only where the GPU supports it natively (A100/L4/H100...).
+    # T4 and P100 (Colab/Kaggle free tiers) don't: use float32 there --
+    # 0.5B weights are ~2 GB, and fp16 risks overflow with Qwen.
+    use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    dtype = torch.bfloat16 if use_bf16 else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
-        args.model,
-        dtype=torch.bfloat16 if torch.cuda.is_available() else torch.float32,
-        device_map="auto",
+        args.model, dtype=dtype, device_map="auto",
     )
     model.eval()
 
@@ -78,6 +82,12 @@ def main():
         "top_p": args.top_p,
         "max_new_tokens": args.max_new_tokens,
         "seed": args.seed,
+        # Same seed != same samples on different hardware/library versions:
+        # record both, and never mix outputs from different setups.
+        "hardware": torch.cuda.get_device_name(0) if torch.cuda.is_available() else "cpu",
+        "dtype": str(dtype),
+        "torch": torch.__version__,
+        "transformers": transformers.__version__,
     }
 
     prompts = build_prompts()
