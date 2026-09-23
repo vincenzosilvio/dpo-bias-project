@@ -115,6 +115,13 @@ code. Know these before you re-derive them:
    - No seed; `review_sample.py` referenced in docs but missing from the
      repo; scripts at the repo root while docs said `src/`. All fixed.
    Each pairing bug above has a regression test in `tests/test_labeling.py`.
+8. **Generation length and dtype (Kaggle smoke tests, 2026-09-23):** at
+   `max_new_tokens=320`, 5/6 stories were truncated. Measured instead of
+   guessed: 40 samples with a 1024 cap, 0 truncated, median 379 / p95 679 /
+   max 718 tokens -> default cap set to 800, templates unchanged. Same run
+   showed `torch.cuda.is_bf16_supported()` returns True on a T4 (it counts
+   emulated bf16); dtype is now chosen by compute capability (>= 8.0 ->
+   bf16, else float32).
 
 ## Evaluation design decisions (fixed before any post-fix data)
 
