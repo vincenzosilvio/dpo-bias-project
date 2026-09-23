@@ -36,8 +36,10 @@ def parse_args():
     parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
     parser.add_argument("--samples-per-prompt", type=int, default=8)
     parser.add_argument(
-        "--max-new-tokens", type=int, default=320,
-        help="Must be large enough that most stories END. Truncated samples "
+        "--max-new-tokens", type=int, default=800,
+        help="Set from a measured length distribution (40 samples, cap 1024, "
+             "0 truncated: median 379, p95 679, max 718 tokens). Must be "
+             "large enough that most stories END. Truncated samples "
              "are excluded from pairs: training DPO on text cut mid-sentence "
              "teaches abrupt endings and would contaminate the helpfulness "
              "check (claim 2).",
@@ -63,10 +65,13 @@ def main():
 
     print(f"Loading {args.model} ...")
     tokenizer = AutoTokenizer.from_pretrained(args.model)
-    # bf16 only where the GPU supports it natively (A100/L4/H100...).
-    # T4 and P100 (Colab/Kaggle free tiers) don't: use float32 there --
-    # 0.5B weights are ~2 GB, and fp16 risks overflow with Qwen.
-    use_bf16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+    # bf16 only where the GPU supports it natively: compute capability >= 8
+    # (Ampere and later: A100, L4, H100...). T4 (7.5) and P100 (6.0) don't.
+    # NOT torch.cuda.is_bf16_supported(): by default it also counts
+    # emulated bf16 and returns True on a T4 (observed on Kaggle).
+    # Elsewhere use float32: 0.5B weights are ~2 GB, fp16 risks overflow.
+    use_bf16 = (torch.cuda.is_available()
+                and torch.cuda.get_device_capability(0)[0] >= 8)
     dtype = torch.bfloat16 if use_bf16 else torch.float32
     model = AutoModelForCausalLM.from_pretrained(
         args.model, dtype=dtype, device_map="auto",
