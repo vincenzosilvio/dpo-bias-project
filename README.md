@@ -44,12 +44,12 @@ Three falsifiable claims:
       "Iteration history" below, this went through several revisions
 - [x] Candidate generation script (`src/generate_dataset.py`)
 - [x] Completion labeling / pairing script (`src/label_completions.py`)
-- [ ] **A full dataset run with the current (post-fix) templates and labeling
-      logic has NOT been done yet.** The last full run (samples-per-prompt=8)
-      used templates from before the "no second character" and "colleague
-      stays ungendered" fixes, and labeling from before the genuine-contrast
-      filter. **Re-run `generate_dataset.py` + `label_completions.py` before
-      trusting any pair counts or moving to training.**
+- [x] Review tooling (`src/review_sample.py`) and unit tests for the pairing
+      logic (`tests/test_labeling.py`)
+- [x] Held-out split fixed in advance (`split` field in `occupations.py`)
+- [ ] **Full dataset run with the current code: NOT done yet.** Everything
+      before 2026-09-23 was generated/labelled with logic that had the bugs
+      in lesson #7 -- no earlier pair count is valid.
 - [ ] Baseline evaluation on WinoBias / BOLD — not yet run
 - [ ] DPO training script — not yet written
 - [ ] Post-training evaluation
@@ -86,22 +86,62 @@ code. Know these before you re-derive them:
    target occupation. Mitigated for the "colleague" template (colleague must
    stay unnamed and ungendered) and the "walked into the room" template
    (banned second characters/narrators outright), but this is a heuristic
-   limitation, not something prompt engineering fully closes. **Every manual
-   spot-check pass must include checking this specifically** — read the
-   sentence the pronoun is in, confirm it's about the named occupation-holder
-   and not someone else in the scene.
+   limitation, not something prompt engineering fully closes. Now ALSO
+   mitigated in code: completions with both he- and she-family pronouns
+   are excluded (see #7). **Every manual spot-check pass must still check
+   this**: a single-gender completion can have pronouns that belong to
+   someone else. Record the verdicts in `data/manual_review.csv`.
+7. **Code review, 2026-09-23 (before the first full post-fix run):**
+   - The "genuine contrast" filter (#5) only required `best_score > 0`, so
+     two counter-stereotypical completions (+5 vs +1) still formed a pair:
+     the same degenerate pair, mirrored. Fixed by pairing by *class*
+     (counter vs stereo), never by score difference.
+   - The score `counter - stereo` let a mixed completion ("5 she + 4 he")
+     count as counter-stereotypical, which is precisely the misattribution
+     case of #6. Fixed: mixed completions are excluded.
+   - "Balanced" occupations scored `-(m+f)`, always <= 0, so after #5 they
+     could never produce pairs, silently. Now explicit: they are a
+     held-out control group.
+   - `max_new_tokens=120` truncated stories mid-sentence and nothing
+     recorded it; DPO on truncated text teaches abrupt endings. Now 320,
+     truncation is recorded and truncated samples are excluded.
+   - Pairs stored the user prompt without the system message used at
+     generation: at training time Qwen's default system prompt would have
+     been injected, so policy/reference log-probs would be computed on a
+     context that never produced the data. Pairs now store the full
+     message list (TRL conversational format).
+   - Refusal residue and first-person narration (outside dialogue) are now
+     filtered in code, not only by prompt instructions.
+   - No seed; `review_sample.py` referenced in docs but missing from the
+     repo; scripts at the repo root while docs said `src/`. All fixed.
+   Each pairing bug above has a regression test in `tests/test_labeling.py`.
+
+## Evaluation design decisions (fixed before any post-fix data)
+
+- **Held-out occupations** (`split="heldout"`): pilot, electrician,
+  hairdresser, librarian never enter training. Balanced occupations are a
+  control group, also never trained on. Effects are reported separately for
+  train / held-out / control: an effect only on train occupations is
+  memorisation, not debiasing.
+- **Overshoot is a failure, not a success.** Every pair pushes towards the
+  counter-stereotypical gender. Trained long enough, DPO will not stop at
+  parity: it will make nurses male and engineers female. The target is a
+  *smaller gap* between male-coded and female-coded occupations in P(female
+  pronoun), not a reversed one. The generation-bias table printed by
+  `review_sample.py` (section 2) is the baseline of this metric.
 
 ## Next concrete step
 
-Re-run the full pipeline with the current code:
+From the repo root, on Colab:
 ```
+python -m pytest tests/ -q
+python src/generate_dataset.py --limit-prompts 3 --samples-per-prompt 2   # smoke test
 python src/generate_dataset.py --samples-per-prompt 8
 python src/label_completions.py
 python src/review_sample.py --sample-size 20
 ```
-`review_sample.py` prints the review (summary stats, auto-flagged
-mixed-pronoun pairs, and a random sample) directly in the Colab output --
-read it there. Only then move to writing `train_dpo.py`.
+Read the full `review_sample.py` output, fill `data/manual_review.csv`,
+and only then write `train_dpo.py`.
 
 ## Repo structure
 
@@ -110,13 +150,14 @@ dpo-bias-project/
 ├── README.md
 ├── requirements.txt
 ├── colab_setup.md
-└── src/
+├── src/
     ├── occupations.py        # occupation list + prompt templates
     ├── generate_dataset.py   # generates raw candidate completions
-    ├── label_completions.py  # scores + pairs completions for DPO
-    └── review_sample.py      # prints a flagged/sampled review of the pairs
-                               # directly in Colab -- run this instead of
-                               # pasting dpo_pairs.jsonl elsewhere for review
+    ├── label_completions.py  # filters, classifies, pairs completions for DPO
+    └── review_sample.py      # funnel, baseline bias table, flags, sample
+tests/
+    └── test_labeling.py      # regression tests for past pairing bugs
+data/                         # created by the scripts
 ```
 
 ## Important note on the occupation data

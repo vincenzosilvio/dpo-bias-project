@@ -9,39 +9,36 @@
 !pip install -q -r requirements.txt
 ```
 
-3. Smoke test on a handful of prompts before committing to the full run
-   (catches bugs/crashes fast instead of after 40 minutes of generation):
+3. Run everything **from the repo root** (do not `%cd src`: output paths
+   are resolved relative to the repo, and the commands below assume it).
 
 ```python
-%cd src
-!python generate_dataset.py --limit-prompts 5 --samples-per-prompt 2
+!python -m pytest tests/ -q
+!python src/generate_dataset.py --limit-prompts 3 --samples-per-prompt 2
+!head -c 1500 data/raw_completions.jsonl
 ```
 
-Check `data/raw_completions.jsonl` looks sane (real completions, not empty
-strings or errors), then run the full generation:
+Check the smoke-test completions are real stories that end (look at the
+`truncated` field), then run the full generation:
 
 ```python
-!python generate_dataset.py --samples-per-prompt 4
+!python src/generate_dataset.py --samples-per-prompt 8
 ```
 
-With 25 occupations x 5 templates x 4 samples = 500 generations, at ~120
-new tokens each, this should take well under an hour on a T4.
+25 occupations x 5 templates = 125 prompts; the 8 samples per prompt are
+generated in a single batched call, so this should take roughly 15-30
+minutes on a T4. If the final printout says >15% truncated, raise
+`--max-new-tokens` and regenerate.
 
-4. Build the preference pairs:
+4. Label and review:
 
 ```python
-!python label_completions.py
+!python src/label_completions.py
+!python src/review_sample.py --sample-size 20
 ```
 
-Read the printed warning if pair count is low — if so, increase
-`--samples-per-prompt` and regenerate, or loosen `--min-pronoun-count`.
+Read all five sections of the review output, then fill in
+`data/manual_review.csv` (download it, or edit it in Colab). Save
+`data/` to Drive or commit it: Colab runtimes are wiped on disconnect.
 
-5. **Before training anything**: pull `data/dpo_pairs.jsonl` down and
-   actually read 20-30 pairs by hand. This is the step most tutorials skip
-   and it's the one that will save the project — if the pronoun heuristic
-   is picking up garbage (e.g. pronouns referring to someone other than the
-   occupation-holder), you want to know now, not after a training run.
-
-Next script (`train_dpo.py`, using `trl.DPOTrainer`) comes once you've
-confirmed the dataset looks right — no point tuning hyperparameters on a
-noisy dataset.
+`train_dpo.py` comes only after the dataset has passed this review.

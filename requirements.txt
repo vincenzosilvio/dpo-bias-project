@@ -1,4 +1,4 @@
-transformers>=4.44.0
+transformers>=4.56.0  # dtype= kwarg in from_pretrained
 trl>=0.10.1
 datasets>=2.20.0
 accelerate>=0.33.0
@@ -9,3 +9,4 @@ sentencepiece
 scikit-learn
 pandas
 tqdm
+pytest
