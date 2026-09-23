@@ -36,6 +36,26 @@ from collections import defaultdict
 MALE_PRONOUNS = re.compile(r"\b(he|him|his)\b", re.IGNORECASE)
 FEMALE_PRONOUNS = re.compile(r"\b(she|her|hers)\b", re.IGNORECASE)
 
+# Safety net: even with an explicit "use a fictional name" instruction, a
+# small model can still slip in a real, well-known person (observed: Mark
+# Zuckerberg turned up for a "CEO" prompt). A completion mentioning any of
+# these is dropped outright -- it's testing recall of a real person, not the
+# model's own generative association, and it doesn't belong in a bias
+# dataset. This list is a starting point, not exhaustive: if you spot-check
+# the pairs (you should) and find another real name, add it here and rerun.
+REAL_PERSON_BLOCKLIST = [
+    "mark zuckerberg", "elon musk", "bill gates", "jeff bezos",
+    "tim cook", "sundar pichai", "satya nadella", "sam altman",
+    "larry page", "sergey brin", "jack ma", "warren buffett",
+    "steve jobs", "richard branson", "indra nooyi", "mary barra",
+    "ginni rometty", "sheryl sandberg",
+]
+
+
+def mentions_real_person(text):
+    lowered = text.lower()
+    return any(name in lowered for name in REAL_PERSON_BLOCKLIST)
+
 # Minimum/maximum acceptable length ratio between chosen and rejected, so
 # DPO doesn't just learn "prefer longer/shorter text" instead of "prefer
 # less stereotyped text". Tune this after inspecting real data.
@@ -90,10 +110,14 @@ def main():
 
     grouped = defaultdict(list)  # (occupation, prompt) -> list of records
     skipped_no_signal = 0
+    skipped_real_person = 0
 
     with open(args.input) as f_in:
         for line in f_in:
             record = json.loads(line)
+            if mentions_real_person(record["completion"]):
+                skipped_real_person += 1
+                continue
             counts = pronoun_counts(record["completion"])
             if (counts["male"] + counts["female"]) < args.min_pronoun_count:
                 skipped_no_signal += 1
@@ -113,7 +137,14 @@ def main():
         records.sort(key=lambda r: r["score"], reverse=True)
         best, worst = records[0], records[-1]
 
-        if best["score"] == worst["score"]:
+        if best["score"] <= 0:
+            # Not just "no tie" -- the top-scoring completion has to be
+            # genuinely counter-stereotypical (score > 0), not merely "less
+            # stereotyped than the other one." Two same-sign completions
+            # (e.g. both female-coded for a female-stereotyped occupation)
+            # produce a degenerate pair: DPO would learn "prefer this over
+            # that" without the pair actually encoding a bias contrast.
+            # Observed rate in manual review: ~1 in 5 groups hit this.
             skipped_no_contrast += 1
             continue
         if length_ratio(best["completion"], worst["completion"]) > MAX_LENGTH_RATIO:
@@ -126,12 +157,18 @@ def main():
             "rejected": worst["completion"],
             "occupation": occupation,
             "stereotype": best["stereotype"],
+            # Kept for auditability -- lets review_sample.py (and you)
+            # sanity-check the pairing logic without recomputing scores.
+            "chosen_score": best["score"],
+            "rejected_score": worst["score"],
         })
 
     with open(args.output, "w") as f_out:
         for pair in pairs:
             f_out.write(json.dumps(pair) + "\n")
 
+    print(f"Skipped {skipped_real_person} completions mentioning a real, "
+          f"well-known person (see REAL_PERSON_BLOCKLIST).")
     print(f"Read completions, skipped {skipped_no_signal} with no pronoun signal.")
     print(f"Skipped {skipped_no_contrast} groups with no score contrast, "
           f"{skipped_length_mismatch} for length mismatch.")
