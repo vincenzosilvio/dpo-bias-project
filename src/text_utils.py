@@ -190,6 +190,10 @@ def _propn_spans(doc):
     quoted = _quoted_token_ids(doc)
     spans, cur = [], []
     for tok in doc:
+        # A quoted nickname inside a name ('Elisabeth "Betty" Rogers') must not
+        # split it into two people: skip it without closing the current span.
+        if cur and (tok.i in quoted or tok.text in ('"', "“", "”")):
+            continue
         if tok.i not in quoted and _is_name_part(tok):
             cur.append(tok)
         elif cur:
