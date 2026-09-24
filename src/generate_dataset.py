@@ -1,12 +1,15 @@
 """
 Generates raw candidate completions from the base model for every
-(occupation, template) prompt. Run on Colab with a GPU runtime, from the
-repo root:
+(occupation, template) prompt. Run on a GPU (Kaggle/Colab), from the repo
+root:
 
-    python src/generate_dataset.py --samples-per-prompt 8
+    python src/generate_dataset.py --template-set short      # DPO data
+    python src/generate_dataset.py --template-set longform   # transfer eval
 
-Output: data/raw_completions.jsonl, one JSON object per line:
-    occupation, stereotype, split, template_id, prompt,
+Defaults depend on the template set (see SET_DEFAULTS). Output:
+data/<template-set>/raw_completions.jsonl, one JSON object per line:
+    occupation, stereotype, split, template_set, template_id,
+    template_split, prompt,
     messages     -- exact chat context (system + user) the sample came from
     completion, sample_id,
     n_new_tokens -- generated length in tokens
@@ -30,27 +33,45 @@ from occupations import build_messages, build_prompts  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
+# short: 16 samples per prompt -- ids 0-7 are the CALIBRATION half (decide
+# which occupations get pairs and in which direction), ids 8-15 the
+# PAIR-SOURCE half. Same prompts, independent samples. Cap measured like the
+# longform one (see README) once the first short run exists.
+# longform: cap measured in lesson #8 (median 379, p95 679, max 718 tokens).
+SET_DEFAULTS = {
+    "short": {"samples_per_prompt": 16, "max_new_tokens": 150},
+    "longform": {"samples_per_prompt": 8, "max_new_tokens": 800},
+}
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", default="Qwen/Qwen2.5-0.5B-Instruct")
-    parser.add_argument("--samples-per-prompt", type=int, default=8)
+    parser.add_argument("--template-set", choices=sorted(SET_DEFAULTS), default="short")
+    parser.add_argument("--samples-per-prompt", type=int, default=None,
+                        help="Default depends on --template-set.")
     parser.add_argument(
-        "--max-new-tokens", type=int, default=800,
-        help="Set from a measured length distribution (40 samples, cap 1024, "
-             "0 truncated: median 379, p95 679, max 718 tokens). Must be "
-             "large enough that most stories END. Truncated samples "
-             "are excluded from pairs: training DPO on text cut mid-sentence "
-             "teaches abrupt endings and would contaminate the helpfulness "
-             "check (claim 2).",
+        "--max-new-tokens", type=int, default=None,
+        help="Default depends on --template-set. Must be large enough that "
+             "most completions END: truncated samples are excluded (DPO on "
+             "text cut mid-sentence teaches abrupt endings).",
     )
     parser.add_argument("--temperature", type=float, default=0.9)
     parser.add_argument("--top-p", type=float, default=0.95)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output", default=str(REPO_ROOT / "data" / "raw_completions.jsonl"))
+    parser.add_argument("--output", default=None,
+                        help="Default: data/<template-set>/raw_completions.jsonl")
     parser.add_argument("--limit-prompts", type=int, default=None,
                         help="Smoke test: only the first N prompts.")
-    return parser.parse_args()
+    args = parser.parse_args()
+    d = SET_DEFAULTS[args.template_set]
+    if args.samples_per_prompt is None:
+        args.samples_per_prompt = d["samples_per_prompt"]
+    if args.max_new_tokens is None:
+        args.max_new_tokens = d["max_new_tokens"]
+    if args.output is None:
+        args.output = str(REPO_ROOT / "data" / args.template_set / "raw_completions.jsonl")
+    return args
 
 
 def main():
@@ -83,6 +104,8 @@ def main():
 
     gen_config = {
         "model": args.model,
+        "template_set": args.template_set,
+        "samples_per_prompt": args.samples_per_prompt,
         "temperature": args.temperature,
         "top_p": args.top_p,
         "max_new_tokens": args.max_new_tokens,
@@ -95,7 +118,7 @@ def main():
         "transformers": transformers.__version__,
     }
 
-    prompts = build_prompts()
+    prompts = build_prompts(args.template_set)
     if args.limit_prompts:
         prompts = prompts[: args.limit_prompts]
     print(f"{len(prompts)} prompts x {args.samples_per_prompt} samples = "
@@ -147,7 +170,7 @@ def main():
                     "gen_config": gen_config,
                 }) + "\n")
 
-            print(f"  done: {p['occupation']} ({p['stereotype']}, t{p['template_id']})")
+            print(f"  done: {p['occupation']} ({p['stereotype']}, t{p['template_id']})", flush=True)
 
     print(f"Wrote {n_total} completions to {args.output}")
     print(f"Truncated (no EOS within {args.max_new_tokens} tokens): "
