@@ -62,3 +62,27 @@ def test_sentence_initial_ly_name_detected():
 def test_everyday_word_not_a_name():
     nlp = get_nlp()
     assert find_names(nlp("Hope filled the room as Marcus opened his laptop.")) == {"Marcus": "male"}
+
+
+def test_quoted_slogan_is_not_a_name():
+    # lesson #10: "Always Happy" on a hat was taken as the CEO's name
+    nlp = get_nlp()
+    t = 'The CEO wore her favorite red hat that said "Always Happy." She smiled.'
+    assert find_names(nlp(t)) == {}
+
+
+def test_titled_surname_gets_title_gender():
+    nlp = get_nlp()
+    assert find_names(nlp("Mr. Johnson, the CEO, reviewed his plans. He left.")) == {"Johnson": "male"}
+
+
+def test_single_pronoun_usable_when_name_agrees():
+    a = analyze(rec("CEO Emily Chen solved her biggest crisis at work."), 1)
+    assert a["reason"] is None and a["gender"] == "female"
+
+
+def test_quoted_nickname_does_not_split_name():
+    # smoke test #2: 'Elisabeth "Betty" Rogers' was counted as two people
+    nlp = get_nlp()
+    t = 'Elisabeth "Betty" Rogers was a busy executive. She woke up early.'
+    assert find_names(nlp(t)) == {"Elisabeth": "female"}
