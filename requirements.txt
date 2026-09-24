@@ -1,4 +1,4 @@
-transformers>=4.56.0  # dtype= kwarg in from_pretrained
+transformers==5.0.0  # pinned: version of the first Kaggle runs
 trl>=0.10.1
 datasets>=2.20.0
 accelerate>=0.33.0
@@ -10,3 +10,5 @@ scikit-learn
 pandas
 tqdm
 pytest
+spacy>=3.8,<3.9
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
