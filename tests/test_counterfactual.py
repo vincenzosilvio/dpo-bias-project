@@ -48,3 +48,8 @@ def test_name_sampling_follows_model_distribution():
     draws = [sample_name(pool, rng) for _ in range(200)]
     assert draws.count("Sarah") > draws.count("Emily")
     assert sample_name(pool, rng, exclude="Sarah") == "Emily"
+
+
+def test_titled_surname_swaps_title_keeps_surname():
+    s, _ = swap_gender("Mr. Johnson, the CEO, reviewed his plans. He left early.", "female", "Ignored")
+    assert s == "Ms. Johnson, the CEO, reviewed her plans. She left early."

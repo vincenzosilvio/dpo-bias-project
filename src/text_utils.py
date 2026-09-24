@@ -151,7 +151,10 @@ AMBIGUOUS_NAMES = {
     "patience", "liberty", "destiny", "harmony", "melody", "story", "lee",
     "ash", "reed", "day", "love", "star", "brook", "river", "stone", "cliff",
     "don", "frank", "grant", "gene", "cole", "wade", "drew", "rob", "sterling",
+    "happy", "lucky", "merry", "bliss", "precious", "charity", "honor",
+    "justice", "royal", "sage", "blessing", "promise", "trinity",
 }
+TITLE_GENDER = {"Mr": "male", "Mrs": "female", "Ms": "female", "Miss": "female"}
 NON_NAME_POS = {"VERB", "AUX", "PRON", "DET", "ADP", "CCONJ", "SCONJ", "PART", "PUNCT", "NUM"}
 
 
@@ -170,11 +173,24 @@ def _is_name_part(tok):
     return tok.pos_ not in NON_NAME_POS
 
 
+def _quoted_token_ids(doc):
+    """Token indices inside quotes: a slogan like "Always Happy" is not a name."""
+    ids, inside = set(), False
+    for tok in doc:
+        if tok.text in ('"', "“", "”"):
+            inside = not inside if tok.text == '"' else tok.text == "“"
+            continue
+        if inside:
+            ids.add(tok.i)
+    return ids
+
+
 def _propn_spans(doc):
-    """Maximal runs of consecutive name parts ("Dr. Emily Chen")."""
+    """Maximal runs of consecutive name parts ("Dr. Emily Chen"), outside quotes."""
+    quoted = _quoted_token_ids(doc)
     spans, cur = [], []
     for tok in doc:
-        if _is_name_part(tok):
+        if tok.i not in quoted and _is_name_part(tok):
             cur.append(tok)
         elif cur:
             spans.append(cur)
@@ -192,16 +208,21 @@ def find_names(doc):
     token found in the names corpus (skipping titles and words like
     "Nurse") is the first name; later tokens are surnames and ignored --
     otherwise "Emily Chen" would count as two people ("Chen" is in the
-    corpus). A run with no corpus name that spaCy tags as PERSON yields an
-    unknown name (gender None).
+    corpus). A run with no corpus name but a gendered title ("Mr. Johnson")
+    yields the surname with the title's gender (lesson #10). Otherwise a run
+    that spaCy tags PERSON yields an unknown name (gender None).
     """
     person_idx = {t.i for ent in doc.ents if ent.label_ == "PERSON" for t in ent}
     found = {}
     for span in _propn_spans(doc):
         tokens = [t for t in span if t.text.rstrip(".") not in TITLES]
         name = next((t.text for t in tokens if name_gender(t.text) is not None), None)
+        title = next((TITLE_GENDER[t.text.rstrip(".")] for t in span
+                      if t.text.rstrip(".") in TITLE_GENDER), None)
         if name is not None:
             found[name] = name_gender(name)
+        elif tokens and title is not None:
+            found[tokens[-1].text] = title
         elif tokens and any(t.i in person_idx for t in tokens):
             found.setdefault(tokens[0].text, None)
     return found

@@ -57,7 +57,9 @@ def parse_args():
     ap = argparse.ArgumentParser()
     ap.add_argument("--input", default=str(DATA / "raw_completions.jsonl"))
     ap.add_argument("--out-dir", default=str(DATA))
-    ap.add_argument("--min-pronoun-count", type=int, default=2)
+    ap.add_argument("--min-pronoun-count", type=int, default=1,
+                    help="1 is safe here because analyze() also requires the "
+                         "name's gender to agree with the pronouns (lesson #10).")
     ap.add_argument("--seed", type=int, default=42)
     return ap.parse_args()
 

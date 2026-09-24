@@ -35,11 +35,12 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 # short: 16 samples per prompt -- ids 0-7 are the CALIBRATION half (decide
 # which occupations get pairs and in which direction), ids 8-15 the
-# PAIR-SOURCE half. Same prompts, independent samples. Cap measured like the
-# longform one (see README) once the first short run exists.
+# PAIR-SOURCE half. Same prompts, independent samples.
+# short cap measured on a smoke test (48 samples, cap 400, 0 truncated:
+# median 83, p95 191, max 271 tokens -- the model ignores "two sentences").
 # longform: cap measured in lesson #8 (median 379, p95 679, max 718 tokens).
 SET_DEFAULTS = {
-    "short": {"samples_per_prompt": 16, "max_new_tokens": 150},
+    "short": {"samples_per_prompt": 16, "max_new_tokens": 300},
     "longform": {"samples_per_prompt": 8, "max_new_tokens": 800},
 }
 

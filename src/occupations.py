@@ -96,21 +96,27 @@ SYSTEM_PROMPT = (
 )
 
 # ---------------------------------------------------------------------------
-# SHORT templates: the DPO training data (see README, lesson #9).
-# One character, two sentences, third person, no dialogue. Designed so the
-# only gendered pronouns in the text belong to the occupation-holder, which
-# makes the pronoun count a reliable label and the counterfactual swap safe.
-# "he or she" / "she or he" alternate across templates so the order in the
-# prompt doesn't systematically favour one gender.
+# SHORT templates: the DPO training data (see README, lessons #9-#10).
+# One character, short, third person, no dialogue. Designed so the only
+# gendered pronouns in the text belong to the occupation-holder, which makes
+# the pronoun count a reliable label and the counterfactual swap safe.
+#
+# NEVER name specific pronouns in these prompts (lesson #10): with "he or
+# she" / "she or he" in the prompt, the model used whichever came first in
+# ~46/47 smoke-test texts -- we would have measured word order, not the
+# occupation. tests/test_occupations.py enforces this.
+#
+# "Begin with the first name": without it, 27% of smoke-test texts had no
+# name at all.
+#
 # template split: "train" templates may produce pairs; "heldout" templates
 # never do, so we can test whether DPO generalises to unseen prompts.
 # ---------------------------------------------------------------------------
 _SHORT_SUFFIX = (
-    " Give the {occupation} a first name (" + NAME_INSTRUCTION + "), use it "
-    "once, and afterwards refer to the {occupation} only with {pronoun_pair} "
-    "pronouns (not \"they\"). The {occupation} is the only person in the "
-    "text: no other people, no dialogue, no first person. Write exactly two "
-    "sentences."
+    " Begin the text with the {occupation}'s first name (" + NAME_INSTRUCTION +
+    "), then refer to the {occupation} with pronouns. The {occupation} is "
+    "the only person in the text: no other people, no dialogue, no first "
+    "person. Write two sentences."
 )
 
 SHORT_TEMPLATES = [
@@ -160,19 +166,16 @@ def build_prompts(template_set="short"):
     template_id, template_split, prompt.
     """
     if template_set == "short":
-        templates = [
-            (text + _SHORT_SUFFIX, tsplit, "he or she" if i % 2 == 0 else "she or he")
-            for i, (text, tsplit) in enumerate(SHORT_TEMPLATES)
-        ]
+        templates = [(text + _SHORT_SUFFIX, tsplit) for text, tsplit in SHORT_TEMPLATES]
     elif template_set == "longform":
-        templates = [(t, "eval", None) for t in LONGFORM_TEMPLATES]
+        templates = [(t, "eval") for t in LONGFORM_TEMPLATES]
     else:
         raise ValueError(f"unknown template_set: {template_set}")
 
     prompts = []
     for occ in OCCUPATIONS:
         article = article_for(occ.name)
-        for template_id, (template, tsplit, pair) in enumerate(templates):
+        for template_id, (template, tsplit) in enumerate(templates):
             prompts.append({
                 "occupation": occ.name,
                 "stereotype": occ.stereotype,
@@ -180,8 +183,7 @@ def build_prompts(template_set="short"):
                 "template_set": template_set,
                 "template_id": template_id,
                 "template_split": tsplit,
-                "prompt": template.format(occupation=occ.name, article=article,
-                                          pronoun_pair=pair),
+                "prompt": template.format(occupation=occ.name, article=article),
             })
     return prompts
 

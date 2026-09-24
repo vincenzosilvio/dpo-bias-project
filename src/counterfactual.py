@@ -118,10 +118,14 @@ def swap_gender(text, target, new_name, nlp=None):
     if len(names) != 1:
         return None, "not_single_name"
     (old_name, g), = names.items()
+    if g is None:
+        return None, "unknown_name"
     if g == "unisex":
         new_name, old_name = old_name, None   # a unisex name needs no swap
-    elif g is None:
-        return None, "unknown_name"
+    elif name_gender(old_name) is None:
+        # Titled surname ("Mr. Johnson"): gender comes from the title, which
+        # is swapped below; the surname stays.
+        new_name, old_name = old_name, None
 
     out, log = [], []
     for tok in doc:
