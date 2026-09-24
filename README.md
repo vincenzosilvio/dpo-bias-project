@@ -49,7 +49,10 @@ Three falsifiable claims:
       templates are kept for the transfer evaluation.
 - [x] Short-form redesign: text analysis (`src/text_utils.py`),
       counterfactual swap (`src/counterfactual.py`), calibration + pairs
-      (`src/build_pairs.py`), review (`src/review_sample.py`), 22 unit tests
+      (`src/build_pairs.py`), review (`src/review_sample.py`), 30 unit tests
+- [x] Short-form smoke test #1 -> template fix (lesson #10)
+- [x] Short-form smoke test #2 with the neutral templates (lesson #11)
+- [ ] Full short-form run
 - [ ] **First short-form run** — not done yet
 - [ ] Manual audit of the short-form pairs (`data/short/manual_review.csv`)
 - [ ] Baseline evaluation (generation bias on short/longform, WinoBias, BOLD)
@@ -154,6 +157,40 @@ code. Know these before you re-derive them:
    proper noun, so names are detected with a names corpus plus POS/NER
    guards (regression tests in `tests/test_text_utils.py`).
 
+10. **Short-form smoke test (48 samples, engineer + CEO): the prompt's
+    pronoun order decided the gender.** Templates alternated "he or she"
+    and "she or he" to balance order effects. Instead, the model used the
+    first-mentioned pronoun almost every time: engineer 12/12 male vs 12/12
+    female, CEO 11/12 male vs 10/10 female, depending only on the order.
+    Any measurement with those prompts would have measured word order, not
+    occupational bias -- and the alternation would have hidden the real
+    effect. Fix: prompts never name pronouns (enforced by
+    `tests/test_occupations.py`). Also found: 27% of texts had no name
+    (fix: "Begin the text with the first name"); a quoted slogan ("Always
+    Happy") detected as a name (fix: ignore quoted text); "Mr. Johnson"
+    discarded (fix: gender from the title, swap Mr <-> Ms, keep surname);
+    single-pronoun texts discarded (min pronoun count now 1, safe because
+    the name must agree with the pronouns); length p95 191 / max 271 tokens,
+    cap set to 300. Not fixable by filters: a named character who is *not*
+    the occupation-holder ("Mary ... the CEO who had made all the
+    difference"); the manual audit measures how often this happens.
+    Methodological note for the write-up: for this 0.5B model a surface cue
+    in the prompt dominates the occupational association, so bias
+    measurements are only meaningful with prompts that don't mention the
+    measured attribute.
+
+11. **Short-form smoke test #2 (neutral templates, 48 samples, engineer +
+    CEO):** usable 77% (was 40%), 0 texts without a name (was 27%), 0
+    "they"-only texts, 0 truncated at 300 tokens (max 237). The per-template
+    gender flip is gone. Engineer 4/19 female, CEO 5/18 female among usable
+    texts (both male-leaning, n too small to compare them). All 4 engineer
+    texts for held-out template t5 ("walking home") were female vs 0/15 in
+    the other templates -- possibly chance, possibly a scene effect; the
+    held-out template split measures exactly this. Reading all 37 usable
+    texts: pronouns referred to the named character in every one. One wrong
+    exclusion fixed: a quoted nickname ('Elisabeth "Betty" Rogers') split the
+    name and "Rogers" counted as a second person.
+
 ## Evaluation design decisions (fixed before any post-fix data)
 
 - **Held-out occupations** (`split="heldout"`): pilot, electrician,
@@ -180,7 +217,7 @@ code. Know these before you re-derive them:
 On Kaggle (see `kaggle_setup.md`), from the repo root:
 ```
 python -m pytest tests/ -q
-python src/generate_dataset.py --template-set short --limit-prompts 6 --samples-per-prompt 4   # smoke test
+python src/generate_dataset.py --template-set short --limit-prompts 12 --samples-per-prompt 4   # smoke test
 python src/generate_dataset.py --template-set short
 python src/build_pairs.py
 python src/review_sample.py --sample-size 25
