@@ -23,11 +23,13 @@ Three falsifiable claims:
      vs. anti-stereotype accuracy.
    - **BOLD** (gender subset, Dhamala et al., 2021) — open-ended generation,
      scored with a regard classifier.
-2. **Preference dataset construction** — generate multiple completions per
-   occupation-prompt from the base model, score them, and pair
-   (chosen = lower-stereotype / higher-regard, rejected = higher-stereotype)
-   while controlling for comparable fluency/length so DPO learns "less
-   stereotyped," not "better written."
+2. **Preference dataset construction** (redesigned in lesson #9) — the base
+   model writes short, single-character texts about each occupation; a
+   calibration half of the samples measures which gender the model
+   defaults to per occupation; for occupations far from parity, each
+   majority-gender text (rejected) is paired with its counterfactual
+   gender swap (chosen). Chosen and rejected differ *only* in gendered
+   words, so DPO learns the gender preference and nothing else.
 3. **DPO training** — `trl.DPOTrainer`, logged (loss, reward margin, KL to
    reference model).
 4. **Post-training evaluation** — same benchmarks, before/after comparison,
@@ -40,18 +42,18 @@ Three falsifiable claims:
 ## Status
 
 - [x] Scope and hypothesis defined
-- [x] Occupation list and prompt templates drafted (`src/occupations.py`) — see
-      "Iteration history" below, this went through several revisions
-- [x] Candidate generation script (`src/generate_dataset.py`)
-- [x] Completion labeling / pairing script (`src/label_completions.py`)
-- [x] Review tooling (`src/review_sample.py`) and unit tests for the pairing
-      logic (`tests/test_labeling.py`)
-- [x] Held-out split fixed in advance (`split` field in `occupations.py`)
-- [ ] **Full dataset run with the current code: NOT done yet.** Everything
-      before 2026-09-23 was generated/labelled with logic that had the bugs
-      in lesson #7 -- no earlier pair count is valid.
-- [ ] Baseline evaluation on WinoBias / BOLD — not yet run
-- [ ] DPO training script — not yet written
+- [x] Occupations, held-out split, templates (`src/occupations.py`)
+- [x] Generation script (`src/generate_dataset.py`), short and longform sets
+- [x] Long-form natural-pair pipeline: built, run once (2026-09-23), and
+      **abandoned** as a source of training data (lesson #9). Long-form
+      templates are kept for the transfer evaluation.
+- [x] Short-form redesign: text analysis (`src/text_utils.py`),
+      counterfactual swap (`src/counterfactual.py`), calibration + pairs
+      (`src/build_pairs.py`), review (`src/review_sample.py`), 22 unit tests
+- [ ] **First short-form run** — not done yet
+- [ ] Manual audit of the short-form pairs (`data/short/manual_review.csv`)
+- [ ] Baseline evaluation (generation bias on short/longform, WinoBias, BOLD)
+- [ ] DPO training script
 - [ ] Post-training evaluation
 - [ ] Write-up
 
@@ -123,6 +125,35 @@ code. Know these before you re-derive them:
    emulated bf16); dtype is now chosen by compute capability (>= 8.0 ->
    bf16, else float32).
 
+9. **First full long-form run (2026-09-23, Kaggle T4): natural pairs abandoned.**
+   1000 completions, 1% truncated, but only **25 pairs** (21 from
+   male-coded occupations, 4 from female-coded), for three reasons:
+   - *Yield/asymmetry:* in 49/76 train groups the model never wrote a
+     counter-stereotypical completion; for female-coded occupations it
+     wrote "he" in ~5 of 202 usable completions. More sampling can't fix it.
+   - *Label noise:* reading the 20-pair sample, 7 had a serious attribution
+     problem and 2 were outright invalid (the rejected text's pronouns
+     never referred to the occupation-holder). All 4 sampled pairs from
+     the colleague template were affected; the model also ignored the
+     "only one person" instruction. Counting pronouns cannot tell who they
+     refer to in long multi-character stories.
+   - *Wrong direction for this model:* "scientist" (labelled male-coded)
+     was 81% female among single-gender completions; the model also skews
+     female overall (68% on balanced occupations; "Sarah"/"Emily"
+     dominate). Pairs defined by human stereotype labels would push some
+     occupations *away* from parity.
+   Baseline from this run (share of she/her among single-gender
+   completions): female-coded 96%, balanced 68%, male-coded 31%.
+   **Redesign:** short single-character templates (pronoun labels become
+   reliable); counterfactual pairs (yield and symmetry solved, contrast
+   isolated to gender); training direction decided per occupation by the
+   model's measured bias on a separate calibration half, with a rule fixed
+   before the first short-form run (`build_pairs.py`); long-form templates
+   kept only to test transfer. Found while building it: spaCy tags
+   sentence-initial "Emily" as an adverb and "Hope filled the room" as a
+   proper noun, so names are detected with a names corpus plus POS/NER
+   guards (regression tests in `tests/test_text_utils.py`).
+
 ## Evaluation design decisions (fixed before any post-fix data)
 
 - **Held-out occupations** (`split="heldout"`): pilot, electrician,
@@ -130,25 +161,32 @@ code. Know these before you re-derive them:
   control group, also never trained on. Effects are reported separately for
   train / held-out / control: an effect only on train occupations is
   memorisation, not debiasing.
-- **Overshoot is a failure, not a success.** Every pair pushes towards the
-  counter-stereotypical gender. Trained long enough, DPO will not stop at
-  parity: it will make nurses male and engineers female. The target is a
-  *smaller gap* between male-coded and female-coded occupations in P(female
-  pronoun), not a reversed one. The generation-bias table printed by
-  `review_sample.py` (section 2) is the baseline of this metric.
+- **Held-out templates** (short set, templates 4-5) never produce pairs,
+  so results are reported on the grid {train, held-out occupations} x
+  {train, held-out templates}, plus long-form stories (transfer).
+- **Headline metric:** GAP = p_female(female-coded) - p_female(male-coded)
+  among single-gender completions. Overall gender skew (p_female on the
+  balanced control group) is reported separately: shrinking the gap is the
+  goal, moving the overall skew is a side effect to report, not hide.
+- **Overshoot is a failure, not a success.** Trained long enough, DPO will
+  not stop at parity: it will make nurses male and engineers female. A
+  reversed gap is a failure. Checkpoints are evaluated along training.
+- **Training direction comes from the model, not from stereotype labels**
+  (pre-registered rule in `build_pairs.py`: |p_female - 0.5| >= 0.20 on the
+  calibration half, n >= 12). Stereotype labels only group the results.
 
 ## Next concrete step
 
-From the repo root, on Colab:
+On Kaggle (see `kaggle_setup.md`), from the repo root:
 ```
 python -m pytest tests/ -q
-python src/generate_dataset.py --limit-prompts 3 --samples-per-prompt 2   # smoke test
-python src/generate_dataset.py --samples-per-prompt 8
-python src/label_completions.py
-python src/review_sample.py --sample-size 20
+python src/generate_dataset.py --template-set short --limit-prompts 6 --samples-per-prompt 4   # smoke test
+python src/generate_dataset.py --template-set short
+python src/build_pairs.py
+python src/review_sample.py --sample-size 25
 ```
-Read the full `review_sample.py` output, fill `data/manual_review.csv`,
-and only then write `train_dpo.py`.
+Read all six sections, fill `data/short/manual_review.csv`, and only then
+write `train_dpo.py`.
 
 ## Repo structure
 
@@ -156,16 +194,28 @@ and only then write `train_dpo.py`.
 dpo-bias-project/
 ├── README.md
 ├── requirements.txt
-├── colab_setup.md
+├── kaggle_setup.md
+├── resources/names/          # Kantrowitz names corpus (see credits)
 ├── src/
-    ├── occupations.py        # occupation list + prompt templates
-    ├── generate_dataset.py   # generates raw candidate completions
-    ├── label_completions.py  # filters, classifies, pairs completions for DPO
-    └── review_sample.py      # funnel, baseline bias table, flags, sample
-tests/
-    └── test_labeling.py      # regression tests for past pairing bugs
-data/                         # created by the scripts
+│   ├── occupations.py        # occupations, splits, short + longform templates
+│   ├── generate_dataset.py   # samples completions (--template-set)
+│   ├── text_utils.py         # filters, pronoun counts, name detection
+│   ├── counterfactual.py     # gender swap for single-character texts
+│   ├── build_pairs.py        # calibration rule + counterfactual DPO pairs
+│   └── review_sample.py      # funnel, calibration, baseline, audit sample
+├── tests/                    # unit + regression tests (pytest)
+└── data/<template-set>/      # created by the scripts
 ```
+
+## Credits
+
+- Names corpus: Mark Kantrowitz, Names Corpus v1.3 (with additions by Bill
+  Ross), redistributed in `resources/names/` with its README, as its
+  license requires.
+- Counterfactual data augmentation: Lu et al. (2020), "Gender Bias in
+  Neural Natural Language Processing"; Zmigrod et al. (2019),
+  "Counterfactual Data Augmentation for Mitigating Gender Stereotypes in
+  Languages with Rich Morphology".
 
 ## Important note on the occupation data
 
