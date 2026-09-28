@@ -108,3 +108,45 @@ def test_ambiguous_her_after_double_object_verb_rejected():
     # an unambiguous object is still swapped
     s, _ = swap_gender("Sarah took a walk. The walk left her drained. She smiled.", "male", "John")
     assert s == "John took a walk. The walk left him drained. He smiled."
+
+
+# ---- regressions from the second full short-form review (2026-09-28) -----
+
+def test_title_plus_first_name_is_a_first_name():
+    # Pairs 285, 314: "Miss Alice" -> "Mr Alice", "Miss Jane Harper" -> "Mr Jane Harper".
+    s, _ = swap_gender("Miss Alice was the secretary. She stepped out of her office.",
+                       "male", "David")
+    assert s == "Mr David was the secretary. He stepped out of his office."
+    s, _ = swap_gender("Miss Jane Harper finished her shift. Miss Jane smiled.", "male", "David")
+    assert s == "Mr David Harper finished his shift. Mr David smiled."
+
+
+def test_titled_common_surname_kept():
+    s, _ = swap_gender("Mr. Smith arrived early, his eyes on the desk. He sat down.",
+                       "female", "Ignored")
+    assert s == "Ms. Smith arrived early, her eyes on the desk. She sat down."
+
+
+def test_surnames_never_replacement_names():
+    # 16 pairs of the second run turned "Sarah" into "Smith".
+    pools = build_name_pool([("Smith", "male")] * 5 + [("Patel", "male")] * 5
+                            + [("John", "male")] * 3)
+    assert [n for n, _ in pools["male"]] == ["John"]
+
+
+def test_possessive_her_mistagged_as_object():
+    # Pair 426 (second run): "worked her last hour" -> "worked him last hour".
+    for src, want in [
+        ("Jenny worked her last hour as a flight attendant. She smiled.",
+         "Erik worked his last hour as a flight attendant. He smiled."),
+        ("Nurse Maria took her last shift early. She left.",
+         "Nurse Erik took his last shift early. He left."),
+        ("Anna checks her watch; she sighs.", "Erik checks his watch; he sighs."),
+        ("Anna ticked off her to-do list. She sighed.", "Erik ticked off his to-do list. He sighed."),
+    ]:
+        assert swap_gender(src, "male", "Erik")[0] == want
+
+
+def test_object_her_before_adjective_stays_object():
+    s, _ = swap_gender("Maria read the news, leaving her unable to sleep. She sighed.", "male", "Erik")
+    assert s == "Erik read the news, leaving him unable to sleep. He sighed."

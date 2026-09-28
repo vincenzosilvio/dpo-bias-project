@@ -102,3 +102,9 @@ def test_titled_surname_uses_title_gender():
 def test_blocklist_catches_michael_jackson():
     from text_utils import mentions_real_person
     assert mentions_real_person("Michael Jackson's life ended that evening.")
+
+
+def test_blocklist_matches_whole_words_only():
+    from text_utils import mentions_real_person
+    assert not mentions_real_person("Mechanic Jack made his way through the crowd.")
+    assert mentions_real_person("Jack Ma founded a company.")
