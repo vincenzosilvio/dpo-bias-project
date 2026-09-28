@@ -65,10 +65,16 @@ notebook, **Add Input -> Your Work -> the data notebook**; its output then
 appears read-only under `/kaggle/input/<data-notebook-name>/`.
 
 ```python
+# after the setup lines (clone, os.chdir, pip install, pytest)
 !unzip -q /kaggle/input/<data-notebook-name>/data_short.zip -d .
+!python src/build_pairs.py      # rebuild pairs with the current code (~3 min)
 !CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py
-!zip -qr /kaggle/working/run.zip runs/
+!zip -qr /kaggle/working/run.zip runs/ data/short/dpo_pairs.jsonl data/short/pair_stats.json
 ```
+
+Rebuilding the pairs in the training run keeps the rule "GitHub holds the
+exact code that produced the data": the completions are unchanged, only
+the pairing code is newer.
 
 `CUDA_VISIBLE_DEVICES=0` matters: with both T4s visible, Trainer uses
 DataParallel and the energy figures cover two GPUs. Download `run.zip`

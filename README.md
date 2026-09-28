@@ -55,7 +55,9 @@ Three falsifiable claims:
 - [x] First full short-form run (2026-09-27): baseline GAP +0.65, 205 pairs;
       review found six swap problems, all fixed (lesson #12). Its data was
       not saved (interactive session): regenerate with a committed run.
-- [ ] Second full short-form run (fixed swap, 24 samples per prompt)
+- [x] Second full short-form run (2026-09-28, 24 samples per prompt): 3600
+      completions, baseline GAP +0.68, 446 pairs after a second round of
+      swap fixes (lesson #13); pairs rebuilt from the saved completions
 - [ ] Manual audit of the short-form pairs (`data/short/manual_review.csv`)
 - [x] DPO training script (`src/train_dpo.py`: LoRA, held-out pairs,
       checkpoints, GPU energy via NVML + Carbontracker); tested end to end
@@ -236,6 +238,40 @@ code. Know these before you re-derive them:
     In the sample it would have dropped good texts ("John works at the auto
     repair shop" for mechanic; "software developer" for programmer).
 
+13. **Second full short-form run (2026-09-28, Kaggle T4, 3600 completions,
+    24 per prompt).** Usable 57%, truncated 3.8%, baseline GAP +0.68 (first
+    run +0.65). 446 pairs (211 male->female, 235 female->male); the new
+    rejections cost 24 pairs (19 person_noun, 5 ambiguous_her). Checking
+    ALL pairs, not only the sample, found four more problems, fixed with
+    regression tests and the pairs rebuilt from the same completions:
+    - **"Miss Alice" -> "Mr Alice"** (5 pairs): lesson #12's rule "title +
+      one word = surname" also caught first names. Now a word after a
+      title is a surname only if it is in a list of common surnames
+      (`COMMON_SURNAMES`, minus those that are also common first names) or
+      is not a first name of the title's gender.
+    - **"Sarah" -> "Smith"** (28 pairs): "Mr. Smith" put Smith (a male
+      first name in the corpus) in the male replacement pool. Surnames are
+      now excluded from the pool.
+    - **Possessive "her" tagged as object** (~12 pairs): "worked her last
+      hour" -> "worked him last hour", "checks her watch" -> "checks him
+      watch". spaCy tags these "her" as PRP. Fix: "her" followed by a noun
+      (after optional modifiers) is possessive. All 83 remaining "him" in
+      chosen texts were read: all objects.
+    - **Blocklist false positives** (37 texts): substring matching found
+      "jack ma" in "Mechanic Jack made"; "John Doe"/"Jane Doe" are
+      placeholders, not real people. Now whole-word matching, placeholders
+      removed.
+    Reading 14 pairs flagged for an other-person noun: in all 14 the
+    pronouns referred to the named character. Remaining known imperfection:
+    unisex corpus names are kept (Alex, Tommy, Sam: 24 pairs), which is
+    correct for the swap but "Tommy" reads as male to most readers.
+    **Calibration is noisy at this n:** with 12-26 usable calibration texts
+    per occupation, two decisions flipped between runs (CEO 0.48 -> 0.27,
+    now targeted; scientist 0.72 -> 0.54, now near parity). The rule was
+    not changed; the decision is taken from this run's data. With n ~ 20
+    the standard error of p is ~0.1, so the 0.20 margin is only ~2 SE: a
+    limitation for the write-up.
+
 ## Evaluation design decisions (fixed before any post-fix data)
 
 - **Held-out occupations** (`split="heldout"`): pilot, electrician,
@@ -267,8 +303,10 @@ python src/generate_dataset.py --template-set short --samples-per-prompt 24
 python src/build_pairs.py
 python src/review_sample.py --sample-size 25
 ```
-Read the review, fill `data/short/manual_review.csv`, then train:
+Done (lesson #13). Next: train on the rebuilt pairs (see `kaggle_setup.md`,
+"Training run"):
 ```
+python src/build_pairs.py          # rebuild from the saved raw_completions.jsonl
 CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py
 ```
 
