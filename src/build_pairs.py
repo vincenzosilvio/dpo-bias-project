@@ -152,7 +152,7 @@ def main():
             "rejected_gender": r["_a"]["gender"],
             "chosen_gender": target,
             "old_name": r["_a"]["name"],
-            "new_name": new_name if r["_a"]["name_gender"] != "unisex" else r["_a"]["name"],
+            "new_name": next((b for a, b in log if a == r["_a"]["name"]), r["_a"]["name"]),
             "swap_log": log,
             "other_person_flag": r["_a"]["other_person_flag"],
         })
@@ -170,6 +170,9 @@ def main():
         "pairs_by_direction": dict(Counter(f"{p['rejected_gender']}->{p['chosen_gender']}" for p in pairs)),
         "pairs_by_occupation": dict(Counter(p["occupation"] for p in pairs)),
         "name_pool_sizes": {g: len(v) for g, v in name_pool.items()},
+        "replacement_names": {
+            g: dict(Counter(p["new_name"] for p in pairs if p["chosen_gender"] == g).most_common())
+            for g in ("male", "female")},
     }
     with open(out_dir / "pair_stats.json", "w") as f:
         json.dump(stats, f, indent=2)
@@ -182,6 +185,14 @@ def main():
               f"-> {c['decision']}" + (f" (push to {c['target_gender']})" if c["target_gender"] else ""))
     print("\nPair source:", dict(source_outcome), "| swap failures:", dict(swap_fail))
     print(f"Wrote {len(pairs)} pairs, by direction {stats['pairs_by_direction']}")
+    for g, counts in stats["replacement_names"].items():
+        total = sum(counts.values())
+        if total:
+            top, n = next(iter(counts.items()))
+            print(f"Replacement names ({g}): {len(counts)} distinct, most frequent {top} "
+                  f"{n}/{total} ({n / total:.0%})")
+            if n / total > max(0.15, 3 / len(counts)):   # 3x the uniform share
+                print(f"WARNING: {top} is over-represented -- DPO may learn the name.")
     if len(pairs) < 200:
         print("WARNING: fewer than 200 pairs -- check the funnel before training.")
 

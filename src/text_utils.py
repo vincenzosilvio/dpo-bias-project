@@ -32,6 +32,18 @@ REAL_PERSON_BLOCKLIST = [
     "ginni rometty", "sheryl sandberg",
     "florence nightingale", "marie curie", "albert einstein",
     "amelia earhart", "neil armstrong",
+    # added after the first full short-form review (pair 79: Michael Jackson
+    # in a firefighter text). Famous people the model may reach for.
+    "michael jackson", "elvis presley", "taylor swift", "barack obama",
+    "donald trump", "joe biden", "oprah winfrey", "michael jordan",
+    "lebron james", "serena williams", "tom hanks", "tom cruise",
+    "brad pitt", "leonardo dicaprio", "beyonce", "madonna", "lady gaga",
+    "kim kardashian", "princess diana", "queen elizabeth", "john lennon",
+    "paul mccartney", "freddie mercury", "martin luther king", "abraham lincoln",
+    "george washington", "isaac newton", "stephen hawking", "nikola tesla",
+    "thomas edison", "ada lovelace", "grace hopper", "alan turing",
+    "linus torvalds", "gordon ramsay", "jamie oliver", "harry potter",
+    "sherlock holmes", "john doe", "jane doe",
 ]
 
 REFUSAL_PATTERN = re.compile(
@@ -223,13 +235,38 @@ def find_names(doc):
         name = next((t.text for t in tokens if name_gender(t.text) is not None), None)
         title = next((TITLE_GENDER[t.text.rstrip(".")] for t in span
                       if t.text.rstrip(".") in TITLE_GENDER), None)
-        if name is not None:
+        if title is not None and len(tokens) == 1:
+            # Gendered title + one word ("Mrs. Smith", "Ms. Patel") is a
+            # surname, even when the corpus lists it as a first name
+            # ("Smith", "Patel" are male in the corpus): the title decides.
+            found[tokens[0].text] = title
+        elif name is not None:
             found[name] = name_gender(name)
         elif tokens and title is not None:
             found[tokens[-1].text] = title
         elif tokens and any(t.i in person_idx for t in tokens):
             found.setdefault(tokens[0].text, None)
     return found
+
+
+def titled_surname(doc, name):
+    """True if `name` only occurs as 'Title Surname' ("Mrs. Smith")."""
+    for span in _propn_spans(doc):
+        tokens = [t for t in span if t.text.rstrip(".") not in TITLES]
+        has_title = any(t.text.rstrip(".") in TITLE_GENDER for t in span)
+        if [t.text for t in tokens] == [name] and has_title:
+            return True
+    return False
+
+
+def name_spans(doc, name):
+    """Non-title tokens of each person span that contains `name`."""
+    out = []
+    for span in _propn_spans(doc):
+        tokens = [t for t in span if t.text.rstrip(".") not in TITLES]
+        if any(t.text == name for t in tokens):
+            out.append(tokens)
+    return out
 
 
 def analyze(record, min_pronoun_count, nlp=None):
