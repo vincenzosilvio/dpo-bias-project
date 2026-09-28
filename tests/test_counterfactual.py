@@ -42,9 +42,69 @@ def test_output_is_pure_target_gender():
     assert pronoun_counts(s) == {"male": 0, "female": 3}
 
 
-def test_name_sampling_follows_model_distribution():
-    pool = build_name_pool([("Sarah", "female")] * 9 + [("Emily", "female")])["female"]
+def test_titles_nouns_and_case_role_noun():
+    s, _ = swap_gender("The waiter, John, cleared his tables. He waved.", "female", "Anna")
+    assert s == "The waitress, Anna, cleared her tables. She waved."
+
+
+# ---- regressions from the first full short-form review (2026-09-28) ------
+
+def test_name_sampling_is_uniform_not_frequency_weighted():
+    # First run: frequency weighting made "John" 71% of male replacements.
+    pool = build_name_pool([("Sarah", "female")] * 90 + [("Emily", "female")] * 10)["female"]
     rng = random.Random(0)
-    draws = [sample_name(pool, rng) for _ in range(200)]
-    assert draws.count("Sarah") > draws.count("Emily")
+    draws = [sample_name(pool, rng) for _ in range(2000)]
+    assert 0.4 < draws.count("Emily") / len(draws) < 0.6
     assert sample_name(pool, rng, exclude="Sarah") == "Emily"
+
+
+def test_name_pool_rejects_rare_and_non_first_names():
+    # Pair 55: the titled surname "Thompson" became a woman's first name.
+    pools = build_name_pool([("Thompson", "female")] * 5 + [("Sarah", "female")] * 3
+                            + [("Emily", "female")] * 3 + [("Zelda", "female")])
+    names = [n for n, _ in pools["female"]]
+    assert "Thompson" not in names
+    rng = random.Random(0)
+    assert {sample_name(pools["female"], rng) for _ in range(200)} == {"Sarah", "Emily"}
+
+
+def test_middle_name_dropped():
+    # Pair 136: "Ms. Sarah Jane Smith" -> "Mr. John Jane Smith".
+    s, _ = swap_gender("Ms. Sarah Jane Smith updated her schedule. She left early.", "male", "John")
+    assert s == "Mr. John Smith updated his schedule. He left early."
+
+
+def test_title_of_another_person_kept():
+    # Pair 129: "Dear Miss Jones" (someone else) became "Dear Mr Jones".
+    s, _ = swap_gender('Sara typed the letter "Dear Miss Jones" at her desk. She smiled.',
+                       "male", "John")
+    assert s == 'John typed the letter "Dear Miss Jones" at his desk. He smiled.'
+
+
+def test_title_addressing_protagonist_swapped():
+    s, _ = swap_gender('Mrs. Thompson arrived early. "Good morning, Mrs. Thompson," said a voice. She nodded.',
+                       "male", "Ignored")
+    assert s == 'Mr. Thompson arrived early. "Good morning, Mr. Thompson," said a voice. He nodded.'
+
+
+def test_titled_surname_that_is_a_corpus_first_name():
+    # "Smith"/"Patel" are male first names in the corpus: the title decides.
+    s, _ = swap_gender("Mrs. Smith arrives early in her raincoat. She checks the books.",
+                       "male", "Ignored")
+    assert s == "Mr. Smith arrives early in his raincoat. He checks the books."
+
+
+def test_person_noun_rejected():
+    # Pair 130: "a woman in a suit" (another person) became "a man".
+    assert swap_gender("Samantha sat at her desk. A woman in a suit knocked. She stood up.",
+                       "male", "Tom") == (None, "person_noun")
+    assert swap_gender("John hugged his son. He smiled.", "female", "Anna") == (None, "person_noun")
+
+
+def test_ambiguous_her_after_double_object_verb_rejected():
+    # Pair 124: "allowed her time" became "allowed his time".
+    assert swap_gender("Sarah took a walk. This allowed her time to rest. She smiled.",
+                       "male", "John") == (None, "ambiguous_her")
+    # an unambiguous object is still swapped
+    s, _ = swap_gender("Sarah took a walk. The walk left her drained. She smiled.", "male", "John")
+    assert s == "John took a walk. The walk left him drained. He smiled."

@@ -86,3 +86,19 @@ def test_quoted_nickname_does_not_split_name():
     nlp = get_nlp()
     t = 'Elisabeth "Betty" Rogers was a busy executive. She woke up early.'
     assert find_names(nlp(t)) == {"Elisabeth": "female"}
+
+
+# ---- regressions from the first full short-form review (2026-09-28) ------
+
+def test_titled_surname_uses_title_gender():
+    # "Mrs. Smith ... her" was excluded as name_pronoun_mismatch ("Smith" is
+    # a male first name in the corpus).
+    from text_utils import find_names, get_nlp
+    nlp = get_nlp()
+    assert find_names(nlp("Mrs. Smith arrives early in her raincoat.")) == {"Smith": "female"}
+    assert find_names(nlp("Ms. Patel woke up early on her first day.")) == {"Patel": "female"}
+
+
+def test_blocklist_catches_michael_jackson():
+    from text_utils import mentions_real_person
+    assert mentions_real_person("Michael Jackson's life ended that evening.")
