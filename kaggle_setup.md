@@ -46,7 +46,7 @@ the first long-form dataset). For the full run, make the notebook contain
 only these cells in order -- setup, install, then:
 
 ```python
-!python src/generate_dataset.py --template-set short
+!python src/generate_dataset.py --template-set short --samples-per-prompt 24
 !python src/build_pairs.py
 !python src/review_sample.py --sample-size 25
 !zip -qr /kaggle/working/data_short.zip data/short
@@ -57,3 +57,21 @@ background (you can close the browser) and everything in
 `/kaggle/working` is kept with that version: open the version, go to
 Output, download `data_short.zip`, and read the logs for the printed
 review.
+
+## Training run
+
+Also a committed run. Give it the pairs from the data run: in the training
+notebook, **Add Input -> Your Work -> the data notebook**; its output then
+appears read-only under `/kaggle/input/<data-notebook-name>/`.
+
+```python
+!unzip -q /kaggle/input/<data-notebook-name>/data_short.zip -d .
+!CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py
+!zip -qr /kaggle/working/run.zip runs/
+```
+
+`CUDA_VISIBLE_DEVICES=0` matters: with both T4s visible, Trainer uses
+DataParallel and the energy figures cover two GPUs. Download `run.zip`
+from the version's Output: it holds every adapter checkpoint (evaluation
+picks one), `resource_report.json` (wall time, GPU energy, peak memory)
+and the Carbontracker logs.

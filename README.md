@@ -49,14 +49,19 @@ Three falsifiable claims:
       templates are kept for the transfer evaluation.
 - [x] Short-form redesign: text analysis (`src/text_utils.py`),
       counterfactual swap (`src/counterfactual.py`), calibration + pairs
-      (`src/build_pairs.py`), review (`src/review_sample.py`), 30 unit tests
+      (`src/build_pairs.py`), review (`src/review_sample.py`), unit tests
 - [x] Short-form smoke test #1 -> template fix (lesson #10)
 - [x] Short-form smoke test #2 with the neutral templates (lesson #11)
-- [ ] Full short-form run
-- [ ] **First short-form run** — not done yet
+- [x] First full short-form run (2026-09-27): baseline GAP +0.65, 205 pairs;
+      review found six swap problems, all fixed (lesson #12). Its data was
+      not saved (interactive session): regenerate with a committed run.
+- [ ] Second full short-form run (fixed swap, 24 samples per prompt)
 - [ ] Manual audit of the short-form pairs (`data/short/manual_review.csv`)
-- [ ] Baseline evaluation (generation bias on short/longform, WinoBias, BOLD)
-- [ ] DPO training script
+- [x] DPO training script (`src/train_dpo.py`: LoRA, held-out pairs,
+      checkpoints, GPU energy via NVML + Carbontracker); tested end to end
+      on a tiny random model
+- [ ] DPO training run
+- [ ] Baseline evaluation (generation bias on short/longform; WinoBias, BOLD later)
 - [ ] Post-training evaluation
 - [ ] Write-up
 
@@ -191,6 +196,46 @@ code. Know these before you re-derive them:
     exclusion fixed: a quoted nickname ('Elisabeth "Betty" Rogers') split the
     name and "Rogers" counted as a second person.
 
+12. **First full short-form run (2026-09-27, Kaggle T4, 2400 completions).**
+    Usable 56% (every template 44-62%), 205 pairs (94 male->female, 111
+    female->male). Baseline GAP +0.65, the same on held-out occupations and
+    held-out templates. Calibration disagreed with the stereotype labels as
+    expected (scientist, surgeon, pharmacist skew female). Reading the 25-pair
+    sample found six problems in the swap, all fixed with regression tests:
+    - **Replacement names:** "John" was 79/111 male replacements (71%), because
+      names were sampled by model frequency: DPO could learn "prefer John".
+      Now uniform over names the model produced at least twice, and
+      `build_pairs.py` warns if one name is over-represented.
+    - **Surnames as first names:** "Mrs. Thompson" put "Thompson" in the
+      female name pool (pair 55: John -> Thompson). The pool now keeps only
+      corpus first names of that gender.
+    - **Middle names:** "Ms. Sarah Jane Smith" -> "Mr. John Jane Smith"
+      (pair 136). Middle names are dropped.
+    - **Other people's titles:** "Dear Miss Jones" -> "Dear Mr Jones" (pair
+      129). Titles are swapped only before the protagonist's name/surname.
+    - **Generic and kinship nouns:** "a woman in a suit" (another person)
+      became "a man" (pair 130); "his son" would become "her daughter". The
+      noun may denote the protagonist or someone else and no rule tells them
+      apart, so texts with man/woman/son/sir... are rejected (`person_noun`).
+      Role nouns (repairman, waitress) are still swapped.
+    - **"her" after double-object verbs:** "allowed her time" -> "allowed his
+      time" (pair 124); spaCy tags it possessive. Rejected
+      (`ambiguous_her`) after verbs like give/allow/offer; the first list
+      also held "leave", which rejected the clearly possessive "leave her
+      classroom" (pair 149), so it was narrowed.
+    Also: "Mrs. Smith ... her" was excluded as a name-pronoun mismatch because
+    the corpus lists Smith (and Patel) as male first names; a gendered title
+    followed by one word is now a surname with the title's gender. A real
+    person got through (pair 79: Michael Jackson, in a firefighter text);
+    blocklist extended. Re-running the fixed swap on the 25 sampled texts:
+    22 swapped, 3 rejected (1 person_noun, 2 ambiguous_her before the verb
+    list was narrowed). Rejections cost ~5-10% of pairs, so the next run
+    uses 24 samples per prompt instead of 16: calibration still uses sample
+    ids 0-7 (rule unchanged), and the pair-source half doubles (8 -> 16).
+    Considered and NOT adopted: requiring the occupation word in the text.
+    In the sample it would have dropped good texts ("John works at the auto
+    repair shop" for mechanic; "software developer" for programmer).
+
 ## Evaluation design decisions (fixed before any post-fix data)
 
 - **Held-out occupations** (`split="heldout"`): pilot, electrician,
@@ -214,16 +259,18 @@ code. Know these before you re-derive them:
 
 ## Next concrete step
 
-On Kaggle (see `kaggle_setup.md`), from the repo root:
+On Kaggle, as a committed run (Save Version -> Save & Run All, see
+`kaggle_setup.md`), from the repo root:
 ```
 python -m pytest tests/ -q
-python src/generate_dataset.py --template-set short --limit-prompts 12 --samples-per-prompt 4   # smoke test
-python src/generate_dataset.py --template-set short
+python src/generate_dataset.py --template-set short --samples-per-prompt 24
 python src/build_pairs.py
 python src/review_sample.py --sample-size 25
 ```
-Read all six sections, fill `data/short/manual_review.csv`, and only then
-write `train_dpo.py`.
+Read the review, fill `data/short/manual_review.csv`, then train:
+```
+CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py
+```
 
 ## Repo structure
 
@@ -239,7 +286,8 @@ dpo-bias-project/
 │   ├── text_utils.py         # filters, pronoun counts, name detection
 │   ├── counterfactual.py     # gender swap for single-character texts
 │   ├── build_pairs.py        # calibration rule + counterfactual DPO pairs
-│   └── review_sample.py      # funnel, calibration, baseline, audit sample
+│   ├── review_sample.py      # funnel, calibration, baseline, audit sample
+│   └── train_dpo.py          # DPO + LoRA, checkpoints, energy measurement
 ├── tests/                    # unit + regression tests (pytest)
 └── data/<template-set>/      # created by the scripts
 ```
@@ -249,7 +297,9 @@ dpo-bias-project/
 - Names corpus: Mark Kantrowitz, Names Corpus v1.3 (with additions by Bill
   Ross), redistributed in `resources/names/` with its README, as its
   license requires.
-- Counterfactual data augmentation: Lu et al. (2020), "Gender Bias in
+- Energy measurement: Anthony, Kanding & Selvan (2020), "Carbontracker: Tracking and Predicting the Carbon Footprint of Training Deep Learning Models".
+
+Counterfactual data augmentation: Lu et al. (2020), "Gender Bias in
   Neural Natural Language Processing"; Zmigrod et al. (2019),
   "Counterfactual Data Augmentation for Mitigating Gender Stereotypes in
   Languages with Rich Morphology".

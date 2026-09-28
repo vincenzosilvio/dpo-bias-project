@@ -1,8 +1,8 @@
 transformers==5.0.0  # pinned: version of the first Kaggle runs
-trl>=0.10.1
+trl==1.14.0          # pinned: DPOConfig API differs across versions
 datasets>=2.20.0
 accelerate>=0.33.0
-peft>=0.12.0
+peft==0.21.0
 bitsandbytes>=0.43.0
 torch>=2.3.0
 sentencepiece
@@ -12,3 +12,5 @@ tqdm
 pytest
 spacy>=3.8,<3.9
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+carbontracker
+nvidia-ml-py
