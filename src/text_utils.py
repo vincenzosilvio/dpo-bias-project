@@ -42,9 +42,12 @@ REAL_PERSON_BLOCKLIST = [
     "paul mccartney", "freddie mercury", "martin luther king", "abraham lincoln",
     "george washington", "isaac newton", "stephen hawking", "nikola tesla",
     "thomas edison", "ada lovelace", "grace hopper", "alan turing",
-    "linus torvalds", "gordon ramsay", "jamie oliver", "harry potter",
-    "sherlock holmes", "john doe", "jane doe",
+    "linus torvalds", "gordon ramsay", "jamie oliver",
 ]
+# Whole-word match: a plain substring test matched "jack ma" inside
+# "Mechanic Jack made" (second short-form run).
+REAL_PERSON_PATTERN = re.compile(
+    r"\b(" + "|".join(re.escape(n) for n in REAL_PERSON_BLOCKLIST) + r")\b", re.IGNORECASE)
 
 REFUSAL_PATTERN = re.compile(
     r"\b(as an ai|ai language model|i'm sorry|i am sorry|i cannot|i can't "
@@ -88,8 +91,7 @@ def pronoun_gender(text):
 
 
 def mentions_real_person(text):
-    lowered = text.lower()
-    return any(name in lowered for name in REAL_PERSON_BLOCKLIST)
+    return bool(REAL_PERSON_PATTERN.search(text))
 
 
 def has_first_person_narration(text):
@@ -167,6 +169,140 @@ AMBIGUOUS_NAMES = {
     "justice", "royal", "sage", "blessing", "promise", "trinity",
 }
 TITLE_GENDER = {"Mr": "male", "Mrs": "female", "Ms": "female", "Miss": "female"}
+
+# Common surnames that the names corpus also lists as first names ("Smith",
+# "Patel" are male there). After a title they are surnames, and they never
+# serve as replacement first names (second short-form run: "Sarah" ->
+# "Smith" in 16 pairs). First-name-heavy surnames (James, Thomas, Scott...)
+# are deliberately left out.
+COMMON_SURNAMES = frozenset("""
+Smith Johnson Williams Brown Jones Garcia Miller Davis Rodriguez Martinez
+Hernandez Lopez Gonzalez Wilson Anderson Taylor Moore Jackson Perez Thompson
+White Harris Sanchez Clark Ramirez Lewis Robinson Walker Wright Torres Nguyen
+Hill Flores Green Adams Nelson Baker Hall Rivera Campbell Mitchell Carter
+Roberts Patel Chen Kim Wang Li Zhang Liu Singh Kumar Khan Rogers Cooper Reed
+Bailey Bell Murphy Parker Evans Edwards Collins Stewart Morris Cook Morgan
+Peterson Gray Ramos Watson Brooks Sanders Price Bennett Wood Barnes Ross
+Henderson Coleman Jenkins Perry Powell Long Patterson Hughes Washington
+Butler Simmons Foster Gonzales Bryant Alexander Russell Griffin Diaz Hayes
+Myers Ford Hamilton Graham Sullivan Wallace Woods Cole West Jordan Owens
+Reynolds Fisher Ellis Harrison Gibson McDonald Cruz Marshall Ortiz Gomez
+Murray Freeman Wells Webb Simpson Stevens Tucker Porter Hunter Hicks Crawford
+Henry Boyd Mason Warren Dixon Burns Gordon Shaw Holmes Rice Robertson Hunt
+Black Daniels Palmer Mills Nichols Grant Knight Ferguson Stone Hawkins
+Dunn Perkins Hudson Spencer Gardner Stephens Payne Pierce Berry Matthews
+Arnold Wagner Willis Ray Watkins Olson Carroll Duncan Snyder Hart
+Cunningham Bradley Lane Andrews Ruiz Harper Fox Riley Armstrong Carpenter
+Weaver Greene Lawrence Elliott Chavez Sims Austin Peters Kelley Franklin
+Lawson Fields Ryan Schmidt Carr Vasquez Castillo Wheeler Chapman Oliver
+Montgomery Richards Williamson Johnston Banks Meyer Bishop McCoy Howell
+Morrison Hansen Fernandez Garza Harvey Little Burton Stanley Nguyen George
+Jacobs Reid Fuller Lynch Dean Gilbert Garrett Romero Welch Larson Frazier
+Burke Hanson Day Mendoza Moreno Bowman Medina Fowler Brewer Hoffman Carlson
+Silva Pearson Holland Douglas Fleming Jensen Vargas Byrd Davidson Hopkins
+May Terry Herrera Wade Soto Walters Curtis Neal Caldwell Lowe Jennings
+Barnett Graves Jimenez Horton Shelton Barrett Obrien Castro Sutton Gregory
+McKinney Lucas Miles Craig Rodriquez Chambers Holt Lambert Fletcher Watts
+Bates Hale Rhodes Pena Beck Newman Haynes McDaniel Mendez Bush Vaughn Parks
+Dawson Santiago Norris Hardy Love Steele Curry Powers Schultz Barker Guzman
+Page Munoz Ball Keller Chandler Weber Leonard Walsh Lyons Ramsey Wolfe
+Schneider Mullins Benson Sharp Bowen Daniel Barber Cummings Hines Baldwin
+Griffith Valdez Hubbard Salazar Reeves Warner Stevenson Burgess Santos Tate
+Cross Garner Mann Mack Moss Thornton Dennis McGee Farmer Delgado Aguilar
+Vega Glover Manning Cohen Harmon Rodgers Robbins Newton Todd Blair Higgins
+Ingram Reese Cannon Strickland Townsend Potter Goodwin Walton Rowe Hampton
+Ortega Patton Swanson Joseph Francis Goodman Maldonado Yates Becker Erickson
+Hodges Rios Conner Adkins Webster Norman Malone Hammond Flowers Cobb Moody
+Quinn Blake Maxwell Pope Floyd Osborne Paul McCarthy Guerrero Lindsey Estrada
+Sandoval Gibbs Tyler Gross Fitzgerald Stokes Doyle Sherman Saunders Wise
+Colon Gill Alvarado Greer Padilla Simon Waters Nunez Ballard Schwartz McBride
+Houston Christensen Klein Pratt Briggs Parsons McLaughlin Zimmerman French
+Buchanan Moran Copeland Roy Pittman Brady McCormick Holloway Brock Poole
+Frank Logan Owen Bass Marsh Drake Wong Jefferson Park Morton Abbott Sparks
+Patrick Norton Huff Clayton Massey Lloyd Figueroa Carson Bowers Roberson
+Barton Tran Lamb Harrington Casey Boone Cortez Clarke Mathis Singleton
+Wilkins Cain Bryan Underwood Hogan McKenzie Collier Luna Phelps McGuire Allison
+Bridges Wilkerson Nash Summers Atkins Wilcox Pitts Conley Marquez Burnett
+Richard Cochran Chase Davenport Hood Gates Clay Ayala Sawyer Roman Vazquez
+Dickerson Hodge Acosta Flynn Espinoza Nicholson Monroe Wolf Morrow Kirk
+Randall Anthony Whitaker Oconnor Skinner Ware Molina Kirby Huffman Bradford
+Charles Gilmore Dominguez Oneal Bruce Lang Combs Kramer Heath Hancock
+Gallagher Gaines Shaffer Short Wiggins Mathews McClain Fischer Wall Small
+Melton Hensley Bond Dyer Cameron Grimes Contreras Christian Wyatt Baxter
+Snow Mosley Shepherd Larsen Hoover Beasley Glenn Petersen Whitehead Meyers
+Keith Garrison Vincent Shields Horn Savage Olsen Schroeder Hartman Woodard
+Mueller Kemp Deleon Booth Patel Calhoun Wiley Eaton Cline Navarro Harrell
+Lester Humphrey Parrish Duran Hutchinson Hess Dorsey Bullock Robles Beard
+Dalton Avila Vance Rich Blackwell York Johns Blankenship Trevino Salinas
+Campos Pruitt Moses Callahan Golden Montoya Hardin Guerra McDowell Carey
+Stafford Gallegos Henson Wilkinson Booker Merritt Miranda Atkinson Orr Decker
+Hobbs Preston Tanner Knox Pacheco Stephenson Glass Rojas Serrano Marks
+Hickman English Sweeney Strong Prince McClure Conway Walter Roth Maynard
+Farrell Lowery Hurst Nixon Weiss Trujillo Ellison Sloan Juarez Winters
+McLean Randolph Leon Boyer Villarreal McCall Gentry Carrillo Kent Ayers Lara
+Shannon Sexton Pace Hull Leblanc Browning Velasquez Leach Chang House Sellers
+Herring Noble Foley Bartlett Mercado Landry Durham Walls Barr McKee Bauer
+Rivers Everett Bradshaw Pugh Velez Rush Estes Dodson Morse Sheppard Weeks
+Camacho Bean Barron Livingston Middleton Spears Branch Blevins Chen Kerr
+McConnell Hatfield Harding Ashley Solis Herman Frost Giles Blackburn William
+Pennington Woodward Finley McIntosh Koch Best Solomon McCullough Dudley Nolan
+Blanchard Rivas Brennan Mejia Kane Benton Joyce Buckley Haley Valentine
+Maddox Russo McKnight Buck Moon McMillan Crosby Berg Dotson Mays Roach Church
+Chan Richmond Meadows Faulkner Oneill Knapp Kline Barry Ochoa Jacobson Gay
+Avery Hendricks Horne Shepard Hebert Cherry Cardenas McIntyre Whitney Waller
+Holman Donaldson Cantu Terrell Morin Gillespie Fuentes Tillman Sanford
+Bentley Peck Key Salas Rollins Gamble Dickson Battle Santana Cabrera Cervantes
+Howe Hinton Hurley Spence Zamora Yang McNeil Suarez Case Petty Gould McFarland
+Sampson Carver Bray Rosario Macdonald Stout Hester Melendez Dillon Farley
+Hopper Galloway Potts Bernard Joyner Stein Aguirre Osborn Mercer Bender
+Franco Rowland Sykes Benjamin Travis Pickett Crane Sears Mayo Dunlap Hayden
+Wilder McKay Coffey McCarty Ewing Cooley Vaughan Bonner Cotton Holder Stark
+Ferrell Cantrell Fulton Lynn Lott Calderon Rosa Pollard Hooper Burch Mullen
+Fry Riddle Levy David Duke Odonnell Guy Michael Britt Frederick Daugherty
+Berger Dillard Alston Jarvis Frye Riggs Chaney Odom Duffy Fitzpatrick
+Valenzuela Merrill Mayer Alford McPherson Acevedo Donovan Barrera Albert Cote
+Reilly Compton Raymond Mooney McGowan Craft Cleveland Clemons Wynn Nielsen
+Baird Stanton Snider Rosales Bright Witt Stuart Hays Holden Rutledge Kinney
+Clements Castaneda Slater Hahn Emerson Conrad Burks Delaney Pate Lancaster
+Sweet Justice Tyson Sharpe Whitfield Talley Macias Irwin Burris Ratliff
+McCray Madden Kaufman Beach Goff Cash Bolton McFadden Levine Good Byers
+Kirkland Kidd Workman Carney Dale McLeod Holcomb England Finch Head Burt
+Hendrix Sosa Haney Franks Sargent Nieves Downs Rasmussen Bird Hewitt Lindsay
+Le Foreman Valencia Oneil Delacruz Vinson Dejesus Hyde Forbes Gilliam Guthrie
+Wooten Huber Barlow Boyle McMahon Buckner Rocha Puckett Langley Knowles Cooke
+Velazquez Whitley Noel Vang Nakamura Tanaka Yamamoto Sato Suzuki Watanabe
+Ito Kobayashi Singh Sharma Gupta Mehta Shah Rao Reddy Iyer Das Bose Ahmed
+Hassan Ali Hussain Rahman Ibrahim Mohamed Rossi Russo Ferrari Esposito
+Bianchi Romano Colombo Ricci Marino Greco Bruno Gallo Conti Costa Mancini
+Muller Schmidt Schneider Fischer Weber Wagner Becker Hoffmann Dubois Moreau
+Laurent Lefebvre Petit Durand Leroy Ivanov Petrov Novak Kowalski Nowak
+Andersson Johansson Nilsson Hansen Jensen Larsen Kowalczyk Oconnell Kelly
+Murphy Walsh Byrne Ryan Doherty Kennedy Lynch Quinn Obrien Harper Sinclair
+Blackwood Ashford Whitmore Hawthorne Sterling Wellington Pemberton
+""".split()) - frozenset("""
+Albert Alexander Allison Anthony Ashley Austin Avery Barry Benjamin Blair Blake
+Bradley Brady Bruce Bryan Cameron Carey Carroll Carson Casey Chandler Charles Chase
+Christian Clay Cole Conrad Craig Curtis Dale Daniel David Dean Delaney Dennis Dillon
+Donovan Douglas Drake Dudley Duncan Elliott Ellis Emerson Everett Finley Floyd Francis
+Frank Franklin Frederick George Gilbert Glenn Gordon Grant Gregory Guy Haley Harrison
+Harvey Hayden Henry Herman Hunter Irwin Jefferson Jordan Joseph Joyce Keith Kelly
+Kelley Kent Kim Kirby Kirk Lane Lara Lawrence Leon Leonard Leroy Lester Lindsay Lindsey
+Lloyd Logan Lucas Luna Lynn Marshall Mason Maxwell May Miles Miranda Michael Mitchell
+Monroe Morgan Morris Moses Neal Nelson Noel Nolan Norman Oliver Owen Patrick Paul Perry
+Pierce Preston Quinn Randall Ray Raymond Reese Reid Rich Richard Riley Rosa Rosario Roy
+Russell Ryan Sawyer Shannon Sherman Simon Solomon Spencer Stanley Sterling Stuart Tanner
+Tate Taylor Terry Todd Travis Tucker Tyler Tyson Valentine Vance Vaughn Vincent Wade
+Wallace Walter Warren Whitney Wiley William Wyatt Wynn Valencia Heath Gay Love Cherry
+Berry Hester Gates Rowe Bell Gray Greer Lamb Page Brooks Britt Gill Merrill Noble
+""".split())   # also common first names: "Miss Ashley" is a first name
+
+
+def surname_after_title(token_text, title_gender):
+    """Is a single word after a gendered title a surname ("Mrs. Smith")
+    rather than a first name ("Miss Alice")?"""
+    if token_text in COMMON_SURNAMES:
+        return True
+    return name_gender(token_text) not in (title_gender, "unisex")
 NON_NAME_POS = {"VERB", "AUX", "PRON", "DET", "ADP", "CCONJ", "SCONJ", "PART", "PUNCT", "NUM"}
 
 
@@ -235,10 +371,10 @@ def find_names(doc):
         name = next((t.text for t in tokens if name_gender(t.text) is not None), None)
         title = next((TITLE_GENDER[t.text.rstrip(".")] for t in span
                       if t.text.rstrip(".") in TITLE_GENDER), None)
-        if title is not None and len(tokens) == 1:
-            # Gendered title + one word ("Mrs. Smith", "Ms. Patel") is a
-            # surname, even when the corpus lists it as a first name
-            # ("Smith", "Patel" are male in the corpus): the title decides.
+        if title is not None and len(tokens) == 1 and surname_after_title(tokens[0].text, title):
+            # Gendered title + surname ("Mrs. Smith", "Ms. Patel"): the title
+            # decides, even when the corpus lists the word as a male first
+            # name. "Miss Alice" is a first name and takes the branch below.
             found[tokens[0].text] = title
         elif name is not None:
             found[name] = name_gender(name)
@@ -253,8 +389,9 @@ def titled_surname(doc, name):
     """True if `name` only occurs as 'Title Surname' ("Mrs. Smith")."""
     for span in _propn_spans(doc):
         tokens = [t for t in span if t.text.rstrip(".") not in TITLES]
-        has_title = any(t.text.rstrip(".") in TITLE_GENDER for t in span)
-        if [t.text for t in tokens] == [name] and has_title:
+        title = next((TITLE_GENDER[t.text.rstrip(".")] for t in span
+                      if t.text.rstrip(".") in TITLE_GENDER), None)
+        if [t.text for t in tokens] == [name] and title and surname_after_title(name, title):
             return True
     return False
 

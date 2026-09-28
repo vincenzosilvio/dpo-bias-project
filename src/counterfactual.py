@@ -38,7 +38,7 @@ the result is not a clean opposite-gender text.
 import re
 
 from text_utils import (
-    MALE_PRONOUNS, FEMALE_PRONOUNS, TITLE_GENDER, TITLES, find_names, get_nlp,
+    COMMON_SURNAMES, MALE_PRONOUNS, FEMALE_PRONOUNS, TITLE_GENDER, TITLES, find_names, get_nlp,
     name_gender, name_spans, pronoun_counts, titled_surname,
 )
 
@@ -88,6 +88,29 @@ def match_case(src, dst):
     if src[:1].isupper():
         return dst[:1].upper() + dst[1:]
     return dst
+
+
+NOUN_TAGS = {"NN", "NNS", "NNP", "NNPS"}
+MODIFIER_TAGS = {"JJ", "JJR", "JJS", "VBG", "VBN", "CD", "HYPH"}
+
+
+def her_is_possessive(tok):
+    """
+    "her" as a possessive determiner ("her last shift") vs object ("thanked
+    her"). spaCy's tag is trusted when it says PRP$, but it tags some
+    possessives as PRP ("worked her last hour", "checks her watch": 12 pairs
+    of the second run became "him last hour"). Look-ahead fix: "her" followed
+    by a noun, possibly after modifiers, is possessive. Objects followed by
+    an adjective and no noun stay objects ("left her unable to").
+    """
+    if tok.tag_ == "PRP$":
+        return True
+    doc, j = tok.doc, tok.i + 1
+    if doc[j:j + 3].text.lower().replace(" ", "") == "to-do":   # "her to-do list"
+        return True
+    while j < len(doc) and doc[j].tag_ in MODIFIER_TAGS:
+        j += 1
+    return j < len(doc) and doc[j].tag_ in NOUN_TAGS
 
 
 def _next_word(tok):
@@ -143,7 +166,7 @@ def _swap_token(tok, target, new_name, old_name, identifiers):
             # possessive determiner ("her tools") -> his; object ("thanked
             # her") -> him. POS-based; residual errors are measured by the
             # manual audit ("swap_correct" column).
-            return match_case(text, "his" if tok.tag_ == "PRP$" else "him")
+            return match_case(text, "his" if her_is_possessive(tok) else "him")
         if low in TO_MALE:
             return match_case(text, TO_MALE[low])
     return None
@@ -168,7 +191,7 @@ def swap_gender(text, target, new_name, nlp=None):
     if any(t.lower_ in PERSON_NOUNS for t in doc):
         return None, "person_noun"
     if target == "male" and any(
-            t.lower_ == "her" and t.tag_ == "PRP$" and t.i > 0
+            t.lower_ == "her" and her_is_possessive(t) and t.i > 0
             and doc[t.i - 1].lemma_.lower() in DOUBLE_OBJECT_VERBS for t in doc):
         return None, "ambiguous_her"
 
@@ -231,7 +254,7 @@ def build_name_pool(names_with_gender):
     from collections import Counter
     pools = {"male": Counter(), "female": Counter()}
     for name, g in names_with_gender:
-        if g in pools and name_gender(name) == g:
+        if g in pools and name_gender(name) == g and name not in COMMON_SURNAMES:
             pools[g][name] += 1
     return {g: sorted(c.items(), key=lambda kv: (-kv[1], kv[0])) for g, c in pools.items()}
 
