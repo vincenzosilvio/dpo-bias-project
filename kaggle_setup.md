@@ -28,6 +28,7 @@ url = f"https://{token}@github.com/<your-username>/dpo-bias-project.git"
 
 ```python
 !pip install -q -r requirements.txt
+!pip uninstall -y -q torchao   # Kaggle's torchao 0.10 makes peft 0.21 fail on import; unused here
 !python -m pytest tests/ -q
 ```
 
@@ -69,7 +70,7 @@ appears read-only under `/kaggle/input/<data-notebook-name>/`.
 !unzip -q /kaggle/input/<data-notebook-name>/data_short.zip -d .
 !python src/build_pairs.py      # rebuild pairs with the current code (~3 min)
 !CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py
-!zip -qr /kaggle/working/run.zip runs/ data/short/dpo_pairs.jsonl data/short/pair_stats.json
+!zip -qr /kaggle/working/run_small.zip runs/*/resource_report.json runs/*/split.json data/short/pair_stats.json
 ```
 
 Rebuilding the pairs in the training run keeps the rule "GitHub holds the
@@ -77,7 +78,28 @@ exact code that produced the data": the completions are unchanged, only
 the pairing code is newer.
 
 `CUDA_VISIBLE_DEVICES=0` matters: with both T4s visible, Trainer uses
-DataParallel and the energy figures cover two GPUs. Download `run.zip`
-from the version's Output: it holds every adapter checkpoint (evaluation
-picks one), `resource_report.json` (wall time, GPU energy, peak memory)
-and the Carbontracker logs.
+DataParallel and the energy figures cover two GPUs. Download only `run_small.zip`
+(`resource_report.json`: wall time, GPU energy, peak memory, full training
+log). The checkpoints stay on Kaggle: the evaluation notebook reads them by
+adding this notebook as input.
+
+## Evaluation run
+
+A third committed notebook. **Add Input -> Your Work -> the training
+notebook**: its output holds the checkpoints (`runs/dpo_qwen0.5b/`) and the
+completions (`data/short/raw_completions.jsonl`). Setup lines as above
+(clone, `pip install`, `pip uninstall -y -q torchao`, pytest), then:
+
+```python
+import glob
+run = os.path.dirname(glob.glob("/kaggle/input/**/runs/dpo_qwen0.5b/resource_report.json", recursive=True)[0])
+raw = glob.glob("/kaggle/input/**/data/short/raw_completions.jsonl", recursive=True)[0]
+print(run, raw)
+!python src/evaluate.py --run-dir {run} --raw {raw} --out-dir runs/eval
+!zip -qr /kaggle/working/eval.zip runs/eval
+```
+
+Expect about 3-4 hours: 7 models in full precision and 2 in 4-bit, 1200
+generations each. Everything goes to `runs/eval/`: per model
+`completions.jsonl` and `metrics.json`, plus `summary.md` (the results
+table) and `summary.json`. `eval.zip` is small (texts and JSON only).

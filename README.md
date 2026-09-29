@@ -62,7 +62,10 @@ Three falsifiable claims:
 - [x] DPO training script (`src/train_dpo.py`: LoRA, held-out pairs,
       checkpoints, GPU energy via NVML + Carbontracker); tested end to end
       on a tiny random model
-- [ ] DPO training run
+- [x] DPO training run (2026-09-29, lesson #14): 24 min on one T4, 26 Wh
+- [x] Evaluation script (`src/evaluate.py`), selection rule fixed before
+      results (see "Evaluation design decisions")
+- [ ] Evaluation run (base, checkpoints, 4-bit)
 - [ ] Baseline evaluation (generation bias on short/longform; WinoBias, BOLD later)
 - [ ] Post-training evaluation
 - [ ] Write-up
@@ -272,6 +275,22 @@ code. Know these before you re-derive them:
     the standard error of p is ~0.1, so the 0.20 margin is only ~2 SE: a
     limitation for the write-up.
 
+14. **DPO training run (2026-09-29, Kaggle T4, `train_dpo.py` defaults).**
+    446 pairs -> 402 train / 44 held-out (stratified by occupation). LoRA
+    r=16 on all linear layers: 8.8M trainable parameters (1.75% of 503M),
+    fp32, beta 0.1, lr 5e-5 cosine, effective batch 8, 3 epochs = 153 steps.
+    Cost: 23.9 min, peak GPU memory 7.0 GB, **GPU energy 26.0 Wh (NVML)**.
+    Carbontracker reports 41.2 Wh = 26.0 Wh x its default PUE of 1.58, so
+    the two measurements agree; 15.8 gCO2eq at 384 g/kWh. Held-out pairs:
+    reward accuracy 0.93-0.98 from step 10 (the contrast is a few gender
+    words, so accuracy says little), margin 0.35 -> 4.4, loss 0.54 -> 0.095,
+    no divergence. **Warning sign:** the log-probability of the CHOSEN texts
+    also fell (-196 -> -252 on train batches) and entropy rose (2.2 -> 2.6):
+    DPO pushed both texts down, rejected faster (a known DPO behaviour).
+    Later checkpoints may therefore write worse text, so the evaluation
+    measures quality (usable rate, perplexity) next to bias, and the
+    selection rule has a quality guard.
+
 ## Evaluation design decisions (fixed before any post-fix data)
 
 - **Held-out occupations** (`split="heldout"`): pilot, electrician,
@@ -289,25 +308,29 @@ code. Know these before you re-derive them:
 - **Overshoot is a failure, not a success.** Trained long enough, DPO will
   not stop at parity: it will make nurses male and engineers female. A
   reversed gap is a failure. Checkpoints are evaluated along training.
+- **Checkpoint selection (fixed 2026-09-29, before any post-training
+  generation was looked at):** fresh generations (seed 1234, 8 per prompt,
+  same sampling settings) from the base model and checkpoints 10, 20, 40,
+  60, 100, 153. Among checkpoints whose usable rate is at most 10 points
+  below the base model's, pick the smallest |GAP| on train occupations x
+  train templates; ties go to the earlier step. Held-out cells are never
+  used for selection. The selected checkpoint and the base model are also
+  evaluated in 4-bit (NF4). Reported for every model: GAP with bootstrap
+  95% CIs on the four cells, control-group p_female, usable rate and
+  exclusion reasons, perplexity on 200 base-model texts for held-out
+  occupations and on WikiText-2, and generation speed and GPU energy per
+  1k tokens.
 - **Training direction comes from the model, not from stereotype labels**
   (pre-registered rule in `build_pairs.py`: |p_female - 0.5| >= 0.20 on the
   calibration half, n >= 12). Stereotype labels only group the results.
 
 ## Next concrete step
 
-On Kaggle, as a committed run (Save Version -> Save & Run All, see
-`kaggle_setup.md`), from the repo root:
+Evaluation on Kaggle (see `kaggle_setup.md`, "Evaluation run"): the
+training notebook's output (checkpoints + completions) as input, then
 ```
-python -m pytest tests/ -q
-python src/generate_dataset.py --template-set short --samples-per-prompt 24
-python src/build_pairs.py
-python src/review_sample.py --sample-size 25
-```
-Done (lesson #13). Next: train on the rebuilt pairs (see `kaggle_setup.md`,
-"Training run"):
-```
-python src/build_pairs.py          # rebuild from the saved raw_completions.jsonl
-CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py
+python src/evaluate.py --run-dir <training output>/runs/dpo_qwen0.5b \
+    --raw <training output>/data/short/raw_completions.jsonl --out-dir runs/eval
 ```
 
 ## Repo structure
@@ -325,7 +348,8 @@ dpo-bias-project/
 │   ├── counterfactual.py     # gender swap for single-character texts
 │   ├── build_pairs.py        # calibration rule + counterfactual DPO pairs
 │   ├── review_sample.py      # funnel, calibration, baseline, audit sample
-│   └── train_dpo.py          # DPO + LoRA, checkpoints, energy measurement
+│   ├── train_dpo.py          # DPO + LoRA, checkpoints, energy measurement
+│   └── evaluate.py           # bias / quality / cost of base, checkpoints, 4-bit
 ├── tests/                    # unit + regression tests (pytest)
 └── data/<template-set>/      # created by the scripts
 ```
