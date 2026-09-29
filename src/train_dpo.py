@@ -230,6 +230,7 @@ def main():
         save_strategy="steps",
         save_steps=args.save_steps,
         save_total_limit=None,          # keep every checkpoint: evaluate.py picks one
+        save_only_model=True,           # adapter only, no optimizer state (~3x smaller)
         report_to="none",
         seed=args.seed,
         use_cpu=not use_cuda,
