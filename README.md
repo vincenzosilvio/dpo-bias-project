@@ -261,6 +261,114 @@ guard. This run was decided **after** runs 1 and 2 failed, and it is
 reported as such. The held-out occupations and templates were never
 used for any of these choices.
 
+Wording note: fine-tuning does lower the probability of the model's
+favourite names too (the softmax sums to 1). The difference from DPO is
+where the mass goes: to the chosen texts, which are in-distribution, and
+not to whatever else is nearby, such as "I" or "As".
+
+Cost note: the run uses `DPOTrainer` with `loss_type=["sft"]`, and the
+training log still reports `logps/rejected` and `rewards/*`. So TRL
+still runs the forward passes on the rejected texts and on the
+reference model, even though the loss does not use them. The reported
+training time and energy are therefore higher than a plain SFT run
+would need, and should be read as an upper bound.
+
+## Run 4, conditional (fixed 2026-09-30, during run 3 training, before any run 3 evaluation)
+
+**Why.** In the standard recipe, DPO starts from a fine-tuned model,
+and that fine-tuned model is also the reference. The original DPO paper
+does this too: when no fine-tuned model exists, it first fine-tunes on
+the preferred completions. Runs 1 and 2 ran DPO directly on the base
+model. That is the setting where likelihood displacement is worst: the
+chosen texts start out of distribution (lesson #16). Run 4 tests the
+standard recipe, DPO on top of run 3. It changes only the starting
+point relative to run 2a, so run 2a vs run 4 isolates the effect of the
+fine-tuning stage.
+
+This section was written while run 3 was training. At that point only
+run 3's training monitor had been seen (96 train-cell texts per check).
+No run 3 evaluation had been run, and no held-out cell had been looked
+at. It replaces run 2's "no third run before the deadline": run 4 is
+run only if the conditions below hold.
+
+### Conditions: run 4 is run only if all hold
+
+The conditions use only the train/train cell and the usable rate, the
+same information the selection rule uses. The held-out cells are never
+used to decide whether run 4 happens.
+
+| # | condition | reason |
+|---|---|---|
+| C1 | Run 3's evaluation selects a checkpoint, i.e. one passes the unchanged quality guard | DPO needs a working starting model |
+| C2 | The selected checkpoint's train/train GAP is **≥ +0.20** (point estimate) | The pairs always push toward the minority gender. With less residual gap, DPO would mostly push past parity (overshoot = failure). +0.20 is the same margin as the calibration rule in `build_pairs.py` |
+| C3 | The code changes below are written and tested (unit test plus a 1-epoch smoke run on the Kaggle T4) before the full run, and nothing else changes | Keeps run 4 comparable to run 2a |
+
+If C1 or C2 fails, there is no run 4. That is reported as the outcome
+("SFT alone reached GAP X; DPO on top was not run because ..."), not
+hidden. If C1–C3 hold but there is no time before the deadline, that is
+said too. It is a practical limit, not a result.
+
+### Settings (fixed now)
+
+| | run 2a | run 4 |
+|---|---|---|
+| starting model | base Qwen2.5-0.5B-Instruct | base + **run 3's selected adapter, merged** (`merge_and_unload`) |
+| reference model | base (adapter disabled) | the merged run 3 model (new adapter disabled) |
+| trainable | new LoRA r 16, α 32, dropout 0.05, all linear layers | same (a new adapter on the merged model) |
+| loss | DPO sigmoid + NLL on chosen, weight 1.0 | same |
+| β, lr, schedule | 0.1, 1e-5 cosine, warmup 10% | same |
+| data | 446 pairs, 402 train / 44 held out (seed 42) | same pairs, same split |
+| epochs, effective batch, checkpoints | 3 (153 steps), 8, every 10 steps | same |
+| monitor, early stop | 24 train-cell prompts × 4 every 10 steps; stop at usable > 10 points below step 0 at 2 consecutive checks | same. Step 0 is now the run 3 model, so the stop is relative to it |
+
+The run-2a settings are reused unchanged on purpose. They are the
+cautious variant, and reusing them means no hyperparameter is chosen
+after seeing run 3.
+
+### Evaluation (fixed now)
+
+- **Same `evaluate.py`, same prompts, seed 1234, 8 samples per prompt**,
+  checkpoints 10, 20, 40, 60, 100 and 153 (or those that exist plus the
+  last one, if training stops early). Each checkpoint is loaded as base
+  + run 3 adapter merged + run 4 adapter.
+- **Quality guard and selection rule unchanged:** usable rate at most 10
+  points below the *base model's* (57%). Among those checkpoints, take
+  the smallest |GAP| on train occupations × train templates; ties go to
+  the earlier step. The run 3 model is also a candidate ("step 0"). So
+  if every run 4 checkpoint is worse, the rule picks the run 3 model and
+  that is the result: DPO added nothing.
+- **Primary comparison, run 4 selected vs run 3 selected:** GAP
+  difference on **train occupations × held-out templates**, with a paired
+  occupation-cluster bootstrap 95% CI (as for base vs 4-bit). This cell
+  was never used for selection and has 14 occupation clusters. The
+  held-out occupation cells (2 occupations per side) are reported but
+  are too small to decide on. "DPO on top helped" is claimed only if the
+  CI of ΔGAP excludes 0 and the usable rate stays within 10 points of
+  run 3's.
+- **Overshoot counts as failure** (Evaluation design decisions). Along
+  with GAP, the per-occupation distance from parity |p_female − 0.5|
+  is reported, so a GAP near 0 made of opposite flips is visible
+  (exploratory, as in run 1's analysis).
+- **Reported as for every model:** control-group p_female, usable rate
+  and exclusion reasons, first-person rate, perplexity (reference and
+  WikiText-2), tokens/s, GPU Wh per 1k tokens. Run 4's training energy is
+  reported next to run 3's, and the combined SFT + DPO cost is reported
+  as the cost of the recipe.
+- **4-bit:** run 3's selected checkpoint is evaluated in NF4 in any
+  case. If run 4 is run and its rule selects a run 4 checkpoint, that
+  one is evaluated in NF4 too.
+
+### Code needed (not written yet; nothing else changes)
+
+- `train_dpo.py --init-adapter <dir>`: load the base model, apply the
+  adapter, `merge_and_unload()`, then continue exactly as now. The
+  reference is then automatically the merged model, via `ref_model=None`
+  with the new LoRA disabled.
+- `evaluate.py --init-adapter <dir>`: the same merge before each run 4
+  checkpoint adapter is loaded, and the run 3 model evaluated as step 0.
+- A unit test that with `--init-adapter`, the merged model's logits
+  equal base + run 3 adapter before training.
+
 ## Next steps
 
 1. With a checkpoint that passes the guard, run the planned question:
