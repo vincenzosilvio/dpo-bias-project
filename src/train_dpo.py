@@ -56,6 +56,19 @@ def parse_args():
     ap.add_argument("--grad-accum", type=int, default=2)
     ap.add_argument("--save-steps", type=int, default=10)
     ap.add_argument("--eval-steps", type=int, default=10)
+    ap.add_argument("--sft-weight", type=float, default=0.0,
+                    help="weight of an NLL term on the CHOSEN texts added to the DPO loss "
+                         "(TRL loss_type=['sigmoid','sft'], RPO-style). 0 = plain DPO (run 1). "
+                         "Counters likelihood displacement on near-identical pairs (lesson #15).")
+    # generation monitor (lesson #15: offline DPO metrics missed the collapse)
+    ap.add_argument("--monitor-every", type=int, default=0,
+                    help="every N steps, generate from a fixed prompt subset and log usable "
+                         "rate / gendered-pronoun share / GAP to <out>/monitor.jsonl. 0 = off")
+    ap.add_argument("--monitor-prompts", type=int, default=24)
+    ap.add_argument("--monitor-samples", type=int, default=4)
+    ap.add_argument("--stop-usable-drop", type=float, default=None,
+                    help="early stop when the monitor's usable rate is more than this below "
+                         "the step-0 value at 2 consecutive checks (e.g. 0.10)")
     # LoRA
     ap.add_argument("--lora-r", type=int, default=16)
     ap.add_argument("--lora-alpha", type=int, default=32)
@@ -125,6 +138,15 @@ class NvmlEnergy:
     def _read(self):
         return [self.nvml.nvmlDeviceGetTotalEnergyConsumption(h) / 1000.0 for h in self.handles]
 
+    def read_j(self):
+        """Current total counter value in J, or None without NVML."""
+        if not self.handles:
+            return None
+        try:
+            return sum(self._read())
+        except Exception:
+            return None
+
     def begin(self):
         if self.handles:
             try:
@@ -175,6 +197,115 @@ def parse_carbontracker(log_dir):
 
 
 # ---------------------------------------------------------------------------
+# Generation monitor
+# ---------------------------------------------------------------------------
+
+def monitor_prompts(n, seed):
+    """Fixed subset of train-occupation x train-template prompts (the selection
+    cell): the monitor never looks at held-out cells."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from occupations import build_prompts
+    pool = [p for p in build_prompts("short")
+            if p["split"] == "train" and p["template_split"] == "train"]
+    random.Random(seed).shuffle(pool)
+    return pool[:n]
+
+
+def monitor_check(model, tokenizer, prompts, n_samples, seed, max_new_tokens=300):
+    """Generate, analyze with the evaluation pipeline, return summary stats."""
+    import torch
+    from transformers import set_seed
+    from occupations import build_messages
+    from text_utils import analyze, get_nlp, pronoun_gender
+    nlp = get_nlp()
+    was_training = model.training
+    model.eval()
+    set_seed(seed)
+    eos = model.generation_config.eos_token_id
+    eos = set(eos if isinstance(eos, (list, tuple)) else [eos])
+    pad = tokenizer.pad_token_id if tokenizer.pad_token_id is not None else tokenizer.eos_token_id
+    rows, examples = [], []
+    for p in prompts:
+        enc = tokenizer.apply_chat_template(build_messages(p["prompt"]), add_generation_prompt=True,
+                                            return_tensors="pt", return_dict=True).to(model.device)
+        plen = enc["input_ids"].shape[-1]
+        with torch.no_grad():
+            out = model.generate(**enc, max_new_tokens=max_new_tokens, do_sample=True,
+                                 temperature=0.9, top_p=0.95, num_return_sequences=n_samples,
+                                 pad_token_id=pad, use_cache=True)
+        for seq in out:
+            ids = seq[plen:].tolist()
+            e = next((i for i, t in enumerate(ids) if t in eos), None)
+            text = tokenizer.decode(ids[: len(ids) if e is None else e + 1],
+                                    skip_special_tokens=True).strip()
+            a = analyze({"completion": text, "truncated": e is None}, 1, nlp)
+            rows.append((p["stereotype"], a, pronoun_gender(text)))
+            if len(examples) < 3:
+                examples.append(text[:200])
+    if was_training:
+        model.train()
+    n = len(rows)
+    usable = [(s, a) for s, a, _ in rows if a["reason"] is None]
+
+    def pf(group):
+        g = [a["gender"] == "female" for s, a in usable if s == group]
+        return sum(g) / len(g) if g else None
+    f, m = pf("female"), pf("male")
+    return {"n": n, "usable_rate": len(usable) / n,
+            "gendered_pronoun_rate": sum(g in ("male", "female", "mixed") for _, _, g in rows) / n,
+            "first_person_rate": sum(a["reason"] == "first_person" for _, a, _ in rows) / n,
+            "gap": (f - m) if f is not None and m is not None else None,
+            "n_usable": len(usable), "examples": examples}
+
+
+def make_monitor_callback(tokenizer, args, out, energy_meter):
+    from transformers import TrainerCallback
+    prompts = monitor_prompts(args.monitor_prompts, args.seed)
+    log_path = out / "monitor.jsonl"
+    state_ = {"base": None, "strikes": 0, "energy_j": 0.0, "time_s": 0.0}
+
+    def run(model, step):
+        t0 = time.time()
+        e0 = energy_meter.read_j()
+        res = monitor_check(model, tokenizer, prompts, args.monitor_samples, args.seed + 7)
+        state_["time_s"] += time.time() - t0
+        e1 = energy_meter.read_j()
+        if e0 is not None and e1 is not None:
+            state_["energy_j"] += e1 - e0
+        res["step"] = step
+        with open(log_path, "a") as f:
+            f.write(json.dumps(res) + "\n")
+        g = "n/a" if res["gap"] is None else f"{res['gap']:+.2f}"
+        print(f"[monitor] step {step:>4} usable {res['usable_rate']:.0%} | gendered pronoun "
+              f"{res['gendered_pronoun_rate']:.0%} | first person {res['first_person_rate']:.0%} "
+              f"| GAP {g} (n={res['n_usable']})", flush=True)
+        return res
+
+    class MonitorCallback(TrainerCallback):
+        def on_train_begin(self, a, state, control, model=None, **kw):
+            log_path.unlink(missing_ok=True)
+            state_["base"] = run(model, 0)["usable_rate"]
+
+        def on_step_end(self, a, state, control, model=None, **kw):
+            if state.global_step % args.monitor_every:
+                return
+            res = run(model, state.global_step)
+            if args.stop_usable_drop is None:
+                return
+            if res["usable_rate"] < state_["base"] - args.stop_usable_drop:
+                state_["strikes"] += 1
+            else:
+                state_["strikes"] = 0
+            if state_["strikes"] >= 2:
+                print(f"[monitor] usable rate below step-0 value - {args.stop_usable_drop:.0%} at "
+                      f"2 consecutive checks: stopping at step {state.global_step}", flush=True)
+                control.should_save = True
+                control.should_training_stop = True
+
+    return MonitorCallback(), state_
+
+
+# ---------------------------------------------------------------------------
 
 def main():
     args = parse_args()
@@ -210,9 +341,14 @@ def main():
         r=args.lora_r, lora_alpha=args.lora_alpha, lora_dropout=args.lora_dropout,
         target_modules="all-linear", task_type="CAUSAL_LM")
 
+    loss_kw = {}
+    if args.sft_weight > 0:
+        loss_kw = {"loss_type": ["sigmoid", "sft"], "loss_weights": [1.0, args.sft_weight]}
+
     config = DPOConfig(
         output_dir=str(out),
         beta=args.beta,
+        **loss_kw,
         max_length=args.max_length,
         truncation_mode="keep_start",
         num_train_epochs=args.epochs,
@@ -237,6 +373,11 @@ def main():
     )
 
     callbacks, tracker = [], None
+    energy = NvmlEnergy()
+    monitor_state = None
+    if args.monitor_every > 0:
+        cb, monitor_state = make_monitor_callback(tokenizer, args, out, energy)
+        callbacks.append(cb)
     if not args.no_carbontracker and use_cuda:
         tracker, cb = make_carbontracker_callback(out / "carbontracker", int(-(-args.epochs // 1)))
         if cb is not None:
@@ -252,7 +393,6 @@ def main():
     n_total = sum(p.numel() for p in trainer.model.parameters())
     print(f"trainable params: {n_trainable:,} / {n_total:,} ({n_trainable / n_total:.2%})")
 
-    energy = NvmlEnergy()
     if use_cuda:
         torch.cuda.reset_peak_memory_stats()
     energy.begin()
@@ -272,6 +412,13 @@ def main():
         "peak_gpu_mem_gb": (torch.cuda.max_memory_allocated() / 1e9) if use_cuda else None,
         "gpu_energy_nvml": gpu_energy,
         "carbontracker": parse_carbontracker(out / "carbontracker") if tracker else None,
+        # Wall time and energy above INCLUDE the generation monitor; its share
+        # is reported here so the cost of training alone can be computed.
+        "monitor": None if monitor_state is None else {
+            "time_s": monitor_state["time_s"],
+            "gpu_energy_kwh": monitor_state["energy_j"] / 3.6e6,
+            "step0_usable_rate": monitor_state["base"],
+            "early_stop_rule": args.stop_usable_drop},
         "global_steps": trainer.state.global_step,
         "log_history": trainer.state.log_history,
         "versions": {m: __import__(m).__version__ for m in ("torch", "transformers", "trl", "peft")},

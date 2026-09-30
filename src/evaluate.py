@@ -404,7 +404,15 @@ def main():
     steps = sorted(ckpt_dirs) if args.steps == "all" else [int(s) for s in args.steps.split(",")]
     missing = [s for s in steps if s not in ckpt_dirs]
     if missing:
-        sys.exit(f"missing checkpoints {missing}; available: {sorted(ckpt_dirs)}")
+        # An early-stopped run (train_dpo.py --stop-usable-drop) has no later
+        # checkpoints: evaluate the ones that exist, plus the last one saved.
+        print(f"WARNING: checkpoints {missing} not found (early stop?); available: {sorted(ckpt_dirs)}")
+        steps = [s for s in steps if s in ckpt_dirs]
+        last = max(ckpt_dirs)
+        if last not in steps:
+            steps.append(last)
+    if not steps:
+        sys.exit(f"no requested checkpoint found in {run_dir}")
     print(f"checkpoints to evaluate: {steps}")
 
     tokenizer = AutoTokenizer.from_pretrained(args.model)

@@ -196,18 +196,46 @@ for all eight models.
 - Long-form transfer, WinoBias/BOLD and a larger model were planned and
   **not done**.
 
+## Run 2 (fixed 2026-09-30, before it was run)
+
+Run 2 changes the training and nothing else. Same 446 pairs, same
+evaluation, same seed, same selection rule. The new settings were chosen
+in response to the quality collapse, not to any GAP value. There are two
+variants that differ only in learning rate: 1e-5 is the cautious one,
+3e-5 moves the model further. **Both are reported**, each with its own
+selection under the unchanged rule. Neither is dropped because of its
+result.
+
+| | run 1 | run 2a | run 2b |
+|---|---|---|---|
+| loss | DPO (sigmoid) | DPO + NLL on chosen, weight 1.0 | same as 2a |
+| learning rate | 5e-5 | 1e-5 | 3e-5 |
+| generation monitor | none | every 10 steps: 24 train-cell prompts × 4 samples | same as 2a |
+| early stop | none | usable rate > 10 points below step 0 at 2 consecutive checks | same as 2a |
+| everything else | β 0.1, LoRA r 16, 3 epochs, effective batch 8, checkpoints every 10 | unchanged | unchanged |
+
+The monitor uses only train occupations × train templates, never the
+held-out cells. Its GPU time and energy are reported separately in
+`resource_report.json` (`monitor`), so the training cost can be read
+without it.
+
+The evaluation reuses the base-model and base-4-bit results of run 1:
+same code, seed and prompts. For each variant it evaluates checkpoints
+10, 20, 40, 60, 100 and 153, or those that exist plus the last one saved
+if training stopped early. Two variants mean two selections on the
+train/train cell, so the selected train/train GAP is optimistic. The
+held-out cells stay the clean test. If no checkpoint passes, that is the
+result, and there is no third run before the application deadline.
+
 ## Next steps
 
-1. **Fix the collapse, then rerun.** Add an NLL term on the chosen texts
-   (in TRL 1.14: `loss_type=["sigmoid", "sft"]` with `loss_weights`),
-   or DPO-Positive; lower the learning rate,
-   train fewer steps, and check usable rate on a few generated samples
-   every 10 steps during training.
-2. With a checkpoint that passes the guard, run the planned question:
+1. With a checkpoint that passes the guard, run the planned question:
    does NF4 change the bias of a debiased model differently than that of
    the base model?
-3. Report bias per joule (performance-per-resource) instead of bias and
+2. Report bias per joule (performance-per-resource) instead of bias and
    energy side by side.
+3. Long-form transfer (templates already in `occupations.py`), the
+   manual audit of the pair sample, a second seed.
 
 ## Reproduce
 

@@ -103,3 +103,54 @@ Expect about 3-4 hours: 7 models in full precision and 2 in 4-bit, 1200
 generations each. Everything goes to `runs/eval/`: per model
 `completions.jsonl` and `metrics.json`, plus `summary.md` (the results
 table) and `summary.json`. `eval.zip` is small (texts and JSON only).
+
+## Run 2 (README, "Run 2")
+
+Before starting: push this repo version (it contains `results/eval/` from
+run 1, which the evaluation reuses). Make **new** notebooks rather than
+new versions of the run-1 notebooks, so the run-1 outputs stay attached
+to their notebooks.
+
+**Training** (`dpo-train-v2`, committed run, GPU T4; input: the data
+notebook, same as run 1). Setup cells as above, then:
+
+```python
+!unzip -q /kaggle/input/<data-notebook-name>/data_short.zip -d .
+!python src/build_pairs.py
+# run 2a (lr 1e-5) and run 2b (lr 3e-5): same notebook, one after the other
+!CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py --out runs/dpo_qwen0.5b_v2 \
+    --lr 1e-5 --sft-weight 1.0 --monitor-every 10 --stop-usable-drop 0.10
+!CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py --out runs/dpo_qwen0.5b_v2b \
+    --lr 3e-5 --sft-weight 1.0 --monitor-every 10 --stop-usable-drop 0.10
+!zip -qr /kaggle/working/run2_small.zip runs/dpo_qwen0.5b_v2*/resource_report.json \
+    runs/dpo_qwen0.5b_v2*/monitor.jsonl runs/dpo_qwen0.5b_v2*/split.json
+```
+
+Expect about 1 h 40 min in total: each variant takes 24 min of training
+plus about 20-25 min for the monitor. Read the `[monitor]` lines in the log. At step 0 the usable
+rate should be about 50-60%. If training stops early, the log says so
+and the checkpoints saved up to that point remain.
+
+**Evaluation** (`dpo-eval-v2`, committed run; input: the `dpo-train-v2`
+notebook). Check that the input really contains the checkpoints: the
+right panel should list the version whose Output tab shows
+`runs/dpo_qwen0.5b_v2/checkpoint-*`. The first run-1 evaluation failed
+because it didn't. Setup cells as above, then:
+
+```python
+import glob, os
+run = os.path.dirname(glob.glob("/kaggle/input/**/runs/dpo_qwen0.5b_v2/resource_report.json", recursive=True)[0])
+raw = glob.glob("/kaggle/input/**/data/short/raw_completions.jsonl", recursive=True)[0]
+print(run, raw)
+!mkdir -p runs/eval2 && cp -r results/eval/base results/eval/base_4bit runs/eval2/   # reuse run-1 base results
+!python src/evaluate.py --run-dir {run} --raw {raw} --out-dir runs/eval2
+!zip -qr /kaggle/working/eval2.zip runs/eval2
+```
+
+Run 2b: a second evaluation notebook (`dpo-eval-v2b`, same input), with
+`dpo_qwen0.5b_v2b` in the glob and `runs/eval2b` / `eval2b.zip` in place
+of `eval2`. If Kaggle lets you run two GPU sessions at once, run both
+evaluations in parallel; otherwise run 2a first.
+
+`[base] already evaluated, skipping` confirms the reuse. Expect about
+2.5 h for six checkpoints plus a 4-bit version of the selected one.
