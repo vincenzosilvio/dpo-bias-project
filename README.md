@@ -1,74 +1,232 @@
-# DPO Fine-tuning for Gender-Occupation Bias Reduction
+# DPO for Gender-Occupation Bias in a Small LLM: Results, Cost and a Documented Failure
 
-## Hypothesis
+**TL;DR.** I fine-tuned Qwen2.5-0.5B-Instruct with DPO + LoRA on 446
+counterfactual preference pairs to reduce gender-occupation bias in
+generated text, and measured the compute cost of every step. Training was
+cheap (24 min and 26 Wh on one T4) and every offline DPO metric looked
+healthy. The evaluation criteria were fixed before any results existed,
+and on generated text **the model collapsed**: the share of usable texts
+fell from 57% to 27% after 10 steps and to 4% after 20. The model stopped
+writing about gendered third-person characters. No checkpoint passed the
+pre-registered quality guard, so **this run makes no debiasing claim.** A
+second finding came from the same pipeline: 4-bit NF4 quantization of the
+base model changed the bias by less than we can detect (ΔGAP −0.06,
+95% CI [−0.22, +0.07]). It cut memory by 77%, but it cost 29% more GPU
+energy per generated token and 84% more per usable text on a T4.
 
-Direct Preference Optimization (DPO) on a purpose-built preference dataset
-reduces stereotyped gender-occupation associations in a small language
-model's generations, while preserving general helpfulness — and the effect
-scales in a measurable, non-trivial way between a 0.5B and a 1.5B parameter
-model.
+## Motivation
 
-Three falsifiable claims:
-1. DPO measurably reduces gender-occupation stereotype scores vs. the base model.
-2. General helpfulness (measured on a standard instruction-following benchmark)
-   does not degrade beyond an acceptable threshold.
-3. The size of the effect differs between the 0.5B and 1.5B model in a way we
-   can characterize (bigger isn't automatically "more debiased").
+Small, quantized LLMs are what actually gets deployed under a compute
+budget. Two questions follow: do efficiency techniques change a model's
+social biases, and can lightweight alignment correct those biases at a
+small fraction of the training cost? This project builds a measured,
+reproducible pipeline to test both questions on one model. It reports
+cost next to bias and text quality, because a debiasing method that
+breaks the model, or an efficiency gain that loses the output, is not a
+gain.
 
-## Method overview
+## Method
 
-1. **Baseline measurement** — evaluate the base model (Qwen2.5-0.5B-Instruct,
-   later Qwen2.5-1.5B-Instruct) on:
-   - **WinoBias** (Zhao et al., 2018) — coreference resolution, pro-stereotype
-     vs. anti-stereotype accuracy.
-   - **BOLD** (gender subset, Dhamala et al., 2021) — open-ended generation,
-     scored with a regard classifier.
-2. **Preference dataset construction** (redesigned in lesson #9) — the base
-   model writes short, single-character texts about each occupation; a
-   calibration half of the samples measures which gender the model
-   defaults to per occupation; for occupations far from parity, each
-   majority-gender text (rejected) is paired with its counterfactual
-   gender swap (chosen). Chosen and rejected differ *only* in gendered
-   words, so DPO learns the gender preference and nothing else.
-3. **DPO training** — `trl.DPOTrainer`, logged (loss, reward margin, KL to
-   reference model).
-4. **Post-training evaluation** — same benchmarks, before/after comparison,
-   plus a general helpfulness check (e.g. a subset of MT-Bench or AlpacaEval)
-   to catch regressions.
-5. **Write-up** — results, trade-offs, and an explicit limitations section
-   (any "non-stereotyped" label embeds a value judgement — this gets
-   discussed, not hidden).
+1. **Data.** The base model writes short single-character texts
+   ("Write about a nurse finishing a long shift. Begin with the nurse's
+   first name ..."). Prompts never mention pronouns (lesson #10). Each
+   text is labelled by its pronouns only when the text has exactly one
+   named character whose name agrees with the pronouns (`text_utils.py`,
+   spaCy + names corpus).
+2. **Direction from the model, not from stereotypes.** A calibration
+   half of the samples measures each occupation's p_female. Occupations
+   with |p_female − 0.5| ≥ 0.20 get pairs, pushed toward the minority
+   gender. This rule was fixed before the data existed (`build_pairs.py`).
+3. **Counterfactual pairs.** Rejected = the model's majority-gender
+   text. Chosen = the same text with the character's gender swapped
+   (pronouns, name, title, role nouns; `counterfactual.py`). 3,600
+   completions gave 446 pairs across 14 occupations (211 male→female,
+   235 female→male). There are 42 unit and regression tests.
+4. **DPO.** `trl` 1.14 DPOTrainer, LoRA r=16 on all linear layers
+   (8.8M trainable parameters, 1.75%), β=0.1, lr 5e-5, 3 epochs =
+   153 steps, checkpoints every 10 steps.
+5. **Evaluation** (`evaluate.py`). The base model, six checkpoints and
+   the base model in 4-bit NF4 each generate 1,200 fresh texts (150
+   prompts × 8, new seed). The grid is {train, held-out occupations} ×
+   {train, held-out templates}. Metrics: GAP = p_female(female-coded) −
+   p_female(male-coded), usable rate, perplexity, tokens/s, GPU energy
+   (NVML). **Pre-registered selection rule:** among checkpoints whose
+   usable rate is at most 10 points below the base model's, take the
+   smallest |GAP| on train occupations × train templates.
+6. **Analysis** (`analyze_eval.py`, CPU only). Occupation-cluster
+   bootstrap CIs, a paired base-vs-4-bit comparison, quality diagnostics
+   and the figures below.
 
-## Status
+## Results
 
-- [x] Scope and hypothesis defined
-- [x] Occupations, held-out split, templates (`src/occupations.py`)
-- [x] Generation script (`src/generate_dataset.py`), short and longform sets
-- [x] Long-form natural-pair pipeline: built, run once (2026-09-23), and
-      **abandoned** as a source of training data (lesson #9). Long-form
-      templates are kept for the transfer evaluation.
-- [x] Short-form redesign: text analysis (`src/text_utils.py`),
-      counterfactual swap (`src/counterfactual.py`), calibration + pairs
-      (`src/build_pairs.py`), review (`src/review_sample.py`), unit tests
-- [x] Short-form smoke test #1 -> template fix (lesson #10)
-- [x] Short-form smoke test #2 with the neutral templates (lesson #11)
-- [x] First full short-form run (2026-09-27): baseline GAP +0.65, 205 pairs;
-      review found six swap problems, all fixed (lesson #12). Its data was
-      not saved (interactive session): regenerate with a committed run.
-- [x] Second full short-form run (2026-09-28, 24 samples per prompt): 3600
-      completions, baseline GAP +0.68, 446 pairs after a second round of
-      swap fixes (lesson #13); pairs rebuilt from the saved completions
-- [ ] Manual audit of the short-form pairs (`data/short/manual_review.csv`)
-- [x] DPO training script (`src/train_dpo.py`: LoRA, held-out pairs,
-      checkpoints, GPU energy via NVML + Carbontracker); tested end to end
-      on a tiny random model
-- [x] DPO training run (2026-09-29, lesson #14): 24 min on one T4, 26 Wh
-- [x] Evaluation script (`src/evaluate.py`), selection rule fixed before
-      results (see "Evaluation design decisions")
-- [ ] Evaluation run (base, checkpoints, 4-bit)
-- [ ] Baseline evaluation (generation bias on short/longform; WinoBias, BOLD later)
-- [ ] Post-training evaluation
-- [ ] Write-up
+### 1. DPO collapsed the model before it reduced the bias
+
+![collapse](results/analysis/fig1_collapse.png)
+
+| model | usable | any gendered pronoun | first person | mean tokens | ppl ref | ppl wiki | GAP train/train | GAP train occ / held-out tmpl |
+|---|---|---|---|---|---|---|---|---|
+| base | 57% | 94% | 22% | 117 | 5.45 | 18.97 | +0.61 [+0.39, +0.80] | +0.66 [+0.42, +0.88] |
+| step 10 | 27% | 70% | 55% | 137 | 5.68 | 19.00 | +0.53 [+0.33, +0.73] | +0.46 [+0.16, +0.71] |
+| step 20 | 4% | 59% | 55% | 93 | 7.55 | 19.28 | *(n < 30)* | *(n < 30)* |
+| step 40 | 4% | 12% | 73% | 36 | 9.97 | 21.05 | *(n < 30)* | *(n < 30)* |
+| step 60 | 4% | 9% | 47% | 54 | 15.35 | 22.41 | *(n < 30)* | *(n < 30)* |
+| step 100 | 0% | 1% | 3% | 7 | 14.80 | 20.83 | n/a | n/a |
+| step 153 | 0% | 0% | 2% | 10 | 16.92 | 21.17 | n/a | n/a |
+
+GAP values carry 95% occupation-cluster bootstrap CIs.
+
+![gap](results/analysis/fig2_gap.png)
+
+- **No checkpoint passes the quality guard** (base 57%; best checkpoint
+  27%), so the pre-registered rule selects nothing. The trained model
+  is not debiased. It is broken.
+- **What the collapse looks like.** At step 10 the model starts writing
+  in the first person (22% → 55% of texts, e.g. *"My name is Emily. I'm
+  a software engineer..."*). By step 40 it writes one-line greetings
+  (*"Greetings, I'm the hairdresser; thank you!"*). From step 100 it
+  writes fragments, a third of them in non-Latin script (*"宣告"*,
+  *"öhne"*). The share of texts with any he/she pronoun falls from 94%
+  to 70%, then 12%, then 0%. The model learned to **avoid the format
+  the pairs were written in**, not to change which gender it picks.
+- **The offline metrics missed it.** Held-out reward accuracy stayed at
+  0.91–0.98 throughout. Reference perplexity moved only 5.45 → 5.68 at
+  step 10, while the usable rate had already halved. The one warning
+  sign in training was that the chosen texts' log-probability also fell
+  (−196 → −252; lesson #14). That is the known *likelihood displacement*
+  failure of DPO on near-identical pairs: Pal et al. 2024 (DPO-Positive)
+  and Razin et al. 2025 show that when chosen and rejected differ by a
+  few tokens, DPO lowers both and moves probability mass to unrelated
+  outputs. A counterfactual gender swap is exactly that kind of pair.
+- **Step 10's GAP is not evidence of reduction.** +0.53 vs +0.61 is well
+  inside the CIs. It is also measured on a self-selected 27% of texts.
+  Where movement exists, it runs one way only. On texts with pure
+  pronouns (any name), male-coded occupations moved toward female
+  (p_female 0.26 → 0.40) while female-coded ones did not move
+  (0.90 → 0.93). The control group jumped from 0.56 to 0.85 female: the
+  model's overall female skew grew rather than the gap closing.
+
+### 2. 4-bit quantization: no detectable bias change, and not an energy saving
+
+![quantization](results/analysis/fig3_quantization.png)
+
+| base model | usable | GAP train/train | GAP train occ / held-out tmpl | tok/s | GPU Wh / 1k tokens | GPU Wh / usable text | weights | peak GPU mem |
+|---|---|---|---|---|---|---|---|---|
+| fp32 | 57% | +0.61 [+0.39, +0.80] | +0.66 [+0.42, +0.88] | 115 | 0.161 | 0.033 | 1,976 MB | 2.16 GB |
+| NF4 4-bit | 45% | +0.53 [+0.31, +0.72] | +0.63 [+0.33, +0.86] | 78 | 0.208 | 0.060 | 451 MB | 0.61 GB |
+
+- **Bias.** GAP(4-bit) − GAP(fp32) on train occupations, all templates,
+  is **−0.06 [−0.22, +0.07]** (paired occupation-cluster bootstrap). No
+  detectable change. With this sample the data cannot rule out shifts of
+  about ±0.2, so this is an absence of evidence, not evidence of
+  absence. Per occupation (figure) the movement looks mostly like noise:
+  about 20–28 usable texts per occupation. The largest shift is housekeeper,
+  1.00 → 0.65 female.
+- **Quality.** The usable rate fell 12 points (57% → 45%). The most
+  common reason was more texts that mix he and she for one character
+  (142 → 214 of 1,200). The drop was uneven: male-coded occupations
+  lost 17 points (62% → 45%), female-coded 12 (55% → 43%). Reference
+  perplexity rose from 5.45 to 6.87.
+- **Cost.** NF4 cut weights by 77% and peak memory by 72%. On a T4 at
+  batch size 8 it was also 32% slower and used 29% more GPU energy per
+  generated token (dequantization overhead on a small model). Per usable
+  text, the unit that counts here, energy went up 84%. The memory saving
+  is real; an energy saving would need other hardware or kernels, and
+  this run does not show one.
+
+### Held-out occupations
+
+On held-out occupations (pilot, electrician, hairdresser, librarian) the
+base model's GAP is +0.89 [+0.73, +1.00] on train templates. This cell has
+only two occupations per side, so its CI rests on two clusters and should
+not be over-read. The held-out × held-out cell has fewer than 30 usable
+texts per side. The DPO checkpoints are not reported there: none passed
+the guard.
+
+### Training cost
+
+24 min on one Tesla T4, 26.0 Wh GPU energy from the NVML hardware counter.
+Carbontracker reports 41.2 Wh, which is 26.0 Wh × its default PUE of
+1.58, so the two measurements agree: 15.8 gCO2eq at 384 g/kWh. Peak memory
+was 7.0 GB. GPU only: CPU energy counters are not readable on Kaggle. The
+evaluation costs more than the training: 23–32 Wh per full-length model
+to generate 1,200 texts, and about 2.3 h of generation and perplexity
+for all eight models.
+
+## What this run shows, and what it doesn't
+
+- ✅ A pipeline that measures generation bias with prompts that don't
+  leak the answer, directions taken from the model, held-out occupations
+  and templates, and cluster-aware CIs.
+- ✅ A pre-registered generation-based guard that caught a failure every
+  offline metric missed. This is the main methodological point: **judge
+  DPO for bias by what the model generates, not by reward accuracy or
+  perplexity.**
+- ✅ A measured cost profile of NF4 on a T4: memory down, energy per
+  useful output up.
+- ❌ No evidence that DPO reduced bias. The run failed before that could
+  be tested.
+- ❌ No evidence about quantization and DPO together: the rule selected
+  no checkpoint to quantize.
+
+## Limitations
+
+- **One model, one seed, one hyperparameter setting.** The collapse may
+  be specific to lr 5e-5 with LoRA on all layers. Nothing was tuned.
+- **Post-hoc analysis choices.** The occupation-cluster bootstrap, the
+  30-texts-per-side threshold, the parity metric and the pronoun
+  diagnostics were chosen after the results were seen. They are
+  reported as exploratory. Only the selection rule and the metric
+  definitions in "Evaluation design decisions" were fixed in advance.
+- **GAP uses human stereotype labels, but training followed the model's
+  own calibration.** For this model all 14 targeted occupations were
+  pushed against their stereotype label, so the two agree here. In
+  general they need not: for this model scientist and surgeon skew
+  female (lesson #12), and pushing such an occupation toward parity
+  would raise GAP.
+- **Label noise.** Pronoun labels rely on single-character texts. The
+  manual audit of the 25-pair sample is still pending.
+- **Small cells.** Held-out occupations have two occupations per
+  stereotype. The 4-bit comparison can only detect GAP changes of
+  about 0.2 or more.
+- **Binary gender.** The metric counts he vs she only. Texts using
+  "they" are excluded, not counted as neutral. Some of the DPO models'
+  "they" texts may be a reasonable outcome that GAP cannot credit.
+- **Energy figures** are GPU-only NVML readings from one run per model
+  on shared cloud hardware.
+- Long-form transfer, WinoBias/BOLD and a larger model were planned and
+  **not done**.
+
+## Next steps
+
+1. **Fix the collapse, then rerun.** Add an NLL term on the chosen texts
+   (in TRL 1.14: `loss_type=["sigmoid", "sft"]` with `loss_weights`),
+   or DPO-Positive; lower the learning rate,
+   train fewer steps, and check usable rate on a few generated samples
+   every 10 steps during training.
+2. With a checkpoint that passes the guard, run the planned question:
+   does NF4 change the bias of a debiased model differently than that of
+   the base model?
+3. Report bias per joule (performance-per-resource) instead of bias and
+   energy side by side.
+
+## Reproduce
+
+Everything runs as committed Kaggle notebooks (details in
+`kaggle_setup.md`). Each stage takes the previous notebook's output as
+input.
+
+```bash
+pip install -r requirements.txt && pip uninstall -y torchao && python -m pytest tests/ -q
+python src/generate_dataset.py --template-set short --samples-per-prompt 24
+python src/build_pairs.py && python src/review_sample.py --sample-size 25
+CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py                                 # 24 min
+python src/evaluate.py --run-dir runs/dpo_qwen0.5b --raw data/short/raw_completions.jsonl --out-dir results/eval   # ~2.5 h
+python src/analyze_eval.py --eval-dir results/eval --out results/analysis      # CPU, ~1 min
+```
+
+`results/` holds the evaluation outputs from the run reported above
+(completions, metrics, training log, pairs), so `analyze_eval.py` can be
+run without a GPU.
 
 ## Iteration history / lessons learned (read this before changing the pipeline)
 
@@ -83,8 +241,8 @@ code. Know these before you re-derive them:
    explicitly demanding third-person narration and banning "I"/"my".
 3. **A real, named public figure appeared** (Mark Zuckerberg, for a "CEO"
    prompt) — fixed with an explicit "fictional name, not a real well-known
-   person" instruction *and* a `REAL_PERSON_BLOCKLIST` safety net in
-   `label_completions.py` (instructions alone aren't reliable enough).
+   person" instruction *and* a `REAL_PERSON_BLOCKLIST` safety net (now in
+   `text_utils.py`) (instructions alone aren't reliable enough).
 4. **"a engineer" / "a electrician"** — grammatical article bug, fixed with
    `article_for()` in `occupations.py`.
 5. **Degenerate pairs**: when no completion in a group was genuinely
@@ -129,7 +287,7 @@ code. Know these before you re-derive them:
      filtered in code, not only by prompt instructions.
    - No seed; `review_sample.py` referenced in docs but missing from the
      repo; scripts at the repo root while docs said `src/`. All fixed.
-   Each pairing bug above has a regression test in `tests/test_labeling.py`.
+   (That labelling pipeline, `legacy/label_completions.py`, was retired in lesson #9; its checks live on in `text_utils.py` and `tests/test_text_utils.py`.)
 8. **Generation length and dtype (Kaggle smoke tests, 2026-09-23):** at
    `max_new_tokens=320`, 5/6 stories were truncated. Measured instead of
    guessed: 40 samples with a 1024 cap, 0 truncated, median 379 / p95 679 /
@@ -291,7 +449,36 @@ code. Know these before you re-derive them:
     measures quality (usable rate, perplexity) next to bias, and the
     selection rule has a quality guard.
 
+15. **Evaluation run (2026-09-30, Kaggle T4): DPO collapsed; no checkpoint
+    selected.** The usable rate went 57% (base) → 27% (step 10) → 4%
+    (steps 20–60) → 0% (steps 100, 153). Texts with a gendered pronoun
+    went 94% → 70% → 12% → 0%. The model first switched to first-person
+    narration, then to one-line greetings, then to fragments, some in
+    non-Latin script. The held-out reward accuracy (0.91–0.98) and
+    reference perplexity (5.45 → 5.68 at step 10) did not show it. The
+    pre-registered usable-rate guard did, and it rejected every
+    checkpoint, so no 4-bit DPO model was evaluated. Diagnosis:
+    likelihood displacement on near-identical pairs (chosen and rejected
+    differ only in gendered words). The chosen log-probability falling
+    in lesson #14 was the early sign. Lessons: (a) monitor generated
+    text during DPO training, not only reward accuracy; (b) with
+    minimal-edit pairs, add an NLL term on chosen or use a lower lr and
+    fewer steps. The first attempt to run the evaluation failed after
+    30 s because the training notebook's output was not attached as
+    input (`/kaggle/input` glob empty): attach the committed version
+    whose Output tab shows `runs/dpo_qwen0.5b/checkpoint-*`.
+    The base-vs-NF4 comparison is unaffected. It shows no detectable
+    GAP change (−0.06 [−0.22, +0.07]), 12 points fewer usable texts
+    (mostly mixed he/she texts), and 29% more GPU energy per token on
+    the T4.
+
 ## Evaluation design decisions (fixed before any post-fix data)
+
+Everything in this section was fixed before the evaluation results. The
+analysis choices in `analyze_eval.py` (occupation-cluster bootstrap,
+30-texts-per-side threshold, parity distance, pronoun diagnostics) were
+added afterwards and are exploratory.
+
 
 - **Held-out occupations** (`split="heldout"`): pilot, electrician,
   hairdresser, librarian never enter training. Balanced occupations are a
@@ -324,17 +511,6 @@ code. Know these before you re-derive them:
   (pre-registered rule in `build_pairs.py`: |p_female - 0.5| >= 0.20 on the
   calibration half, n >= 12). Stereotype labels only group the results.
 
-  A cell counts as reduced if the 95% occupation-cluster bootstrap CI of (GAP_base − GAP_selected) excludes 0; as overshoot if the selected checkpoint's GAP CI lies entirely below 0. The held-out-occupation × held-out-template cell (~18 usable texts per side) is reported but not interpreted on its own. The 4-bit effect is claimed only if the CI of (GAP_4bit − GAP_fp32) excludes 0; otherwise we report the largest effect the data could have missed. Parity distance (below) is exploratory.
-
-## Next concrete step
-
-Evaluation on Kaggle (see `kaggle_setup.md`, "Evaluation run"): the
-training notebook's output (checkpoints + completions) as input, then
-```
-python src/evaluate.py --run-dir <training output>/runs/dpo_qwen0.5b \
-    --raw <training output>/data/short/raw_completions.jsonl --out-dir runs/eval
-```
-
 ## Repo structure
 
 ```
@@ -351,31 +527,34 @@ dpo-bias-project/
 │   ├── build_pairs.py        # calibration rule + counterfactual DPO pairs
 │   ├── review_sample.py      # funnel, calibration, baseline, audit sample
 │   ├── train_dpo.py          # DPO + LoRA, checkpoints, energy measurement
-│   └── evaluate.py           # bias / quality / cost of base, checkpoints, 4-bit
+│   ├── evaluate.py           # bias / quality / cost of base, checkpoints, 4-bit (GPU)
+│   └── analyze_eval.py       # cluster CIs, diagnostics, figures (CPU)
+├── results/                  # outputs of the reported run
+│   ├── eval/<model>/         # completions.jsonl, metrics.json; summary.md/json
+│   ├── analysis/             # analysis.json, tables.md, fig1-3
+│   ├── resource_report.json  # training cost + full training log
+│   ├── split.json, dpo_pairs.jsonl
 ├── tests/                    # unit + regression tests (pytest)
+├── legacy/                   # first labelling pipeline (lessons #1-8), not used
 └── data/<template-set>/      # created by the scripts
 ```
 
-## Credits
+## Credits and references
 
 - Names corpus: Mark Kantrowitz, Names Corpus v1.3 (with additions by Bill
   Ross), redistributed in `resources/names/` with its README, as its
   license requires.
-- Energy measurement: Anthony, Kanding & Selvan (2020), "Carbontracker: Tracking and Predicting the Carbon Footprint of Training Deep Learning Models".
-
-Counterfactual data augmentation: Lu et al. (2020), "Gender Bias in
+- Energy measurement: Anthony, Kanding & Selvan (2020), "Carbontracker:
+  Tracking and Predicting the Carbon Footprint of Training Deep Learning
+  Models".
+- Counterfactual data augmentation: Lu et al. (2020), "Gender Bias in
   Neural Natural Language Processing"; Zmigrod et al. (2019),
   "Counterfactual Data Augmentation for Mitigating Gender Stereotypes in
   Languages with Rich Morphology".
-
-## Important note on the occupation data
-
-`src/occupations.py` categorizes occupations as stereotypically
-male-associated, female-associated, or balanced based on commonly cited
-categorizations in the bias literature (e.g. Zhao et al. 2018, WinoBias).
-**Before the final write-up, cross-check current gender-participation
-percentages against the U.S. Bureau of Labor Statistics
-[Labor Force Statistics, Table 11](https://www.bls.gov/cps/cpsaat11.htm)**
-(or your country's equivalent, if you want an Italy/EU angle instead — worth
-considering given your background) rather than relying on the qualitative
-labels alone. This is flagged in code with a `TODO`.
+- DPO failure mode: Pal et al. (2024), "Smaug: Fixing Failure Modes of
+  Preference Optimisation with DPO-Positive"; Razin et al. (2025),
+  "Unintentional Unalignment: Likelihood Displacement in Direct
+  Preference Optimization" (ICLR).
+- Occupation groupings follow Zhao et al. (2018), WinoBias. They are
+  qualitative labels, used only to group results; they are not labour
+  statistics (see `src/occupations.py`).

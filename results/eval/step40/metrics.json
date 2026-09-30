@@ -1,0 +1,270 @@
+{
+  "tag": "step40",
+  "adapter": "/kaggle/input/notebooks/vinevixx/llm-dpo-2/dpo-bias-project/runs/dpo_qwen0.5b/checkpoint-40",
+  "four_bit": false,
+  "n_generated": 1200,
+  "usable_rate": 0.041666666666666664,
+  "reasons": {
+    "first_person": 842,
+    "no_signal": 254,
+    "usable": 50,
+    "refusal": 18,
+    "no_name": 23,
+    "mixed": 4,
+    "multi_person": 5,
+    "unknown_name": 2,
+    "name_pronoun_mismatch": 1,
+    "truncated": 1
+  },
+  "truncated_rate": 0.0008333333333333334,
+  "mean_new_tokens": 35.575833333333335,
+  "ppl_reference": 9.966120177145365,
+  "ppl_wikitext": 21.04550797988386,
+  "bias": {
+    "cells": {
+      "balanced|heldout|heldout": {
+        "n": 5,
+        "p_female": 1.0
+      },
+      "balanced|heldout|train": {
+        "n": 4,
+        "p_female": 1.0
+      },
+      "female|heldout|train": {
+        "n": 3,
+        "p_female": 1.0
+      },
+      "female|train|heldout": {
+        "n": 6,
+        "p_female": 0.8333333333333334
+      },
+      "female|train|train": {
+        "n": 10,
+        "p_female": 1.0
+      },
+      "male|heldout|heldout": {
+        "n": 3,
+        "p_female": 1.0
+      },
+      "male|heldout|train": {
+        "n": 1,
+        "p_female": 1.0
+      },
+      "male|train|heldout": {
+        "n": 4,
+        "p_female": 0.75
+      },
+      "male|train|train": {
+        "n": 14,
+        "p_female": 0.8571428571428571
+      }
+    },
+    "gap": {
+      "train_occ|train_tmpl": {
+        "gap": 0.1428571428571429,
+        "ci95": [
+          0.0,
+          0.3571428571428571
+        ],
+        "n_female_coded": 10,
+        "n_male_coded": 14
+      },
+      "train_occ|heldout_tmpl": {
+        "gap": 0.08333333333333337,
+        "ci95": [
+          -0.33333333333333337,
+          0.5833333333333334
+        ],
+        "n_female_coded": 6,
+        "n_male_coded": 4
+      },
+      "heldout_occ|train_tmpl": {
+        "gap": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "n_female_coded": 3,
+        "n_male_coded": 1
+      },
+      "heldout_occ|heldout_tmpl": {
+        "gap": null,
+        "ci95": null,
+        "n_female_coded": 0,
+        "n_male_coded": 3
+      },
+      "all": {
+        "gap": 0.08373205741626788,
+        "ci95": [
+          -0.10526315789473684,
+          0.2727272727272727
+        ],
+        "n_female_coded": 19,
+        "n_male_coded": 22
+      }
+    },
+    "control_p_female": {
+      "p_female": 1.0,
+      "n": 9
+    },
+    "per_occupation": {
+      "CEO": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 2,
+        "p_female": 1.0
+      },
+      "accountant": {
+        "stereotype": "balanced",
+        "split": "heldout",
+        "n": 4,
+        "p_female": 1.0
+      },
+      "electrician": {
+        "stereotype": "male",
+        "split": "heldout",
+        "n": 3,
+        "p_female": 1.0
+      },
+      "engineer": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 5,
+        "p_female": 0.6
+      },
+      "firefighter": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 2,
+        "p_female": 1.0
+      },
+      "flight attendant": {
+        "stereotype": "female",
+        "split": "train",
+        "n": 3,
+        "p_female": 1.0
+      },
+      "hairdresser": {
+        "stereotype": "female",
+        "split": "heldout",
+        "n": 3,
+        "p_female": 1.0
+      },
+      "housekeeper": {
+        "stereotype": "female",
+        "split": "train",
+        "n": 3,
+        "p_female": 1.0
+      },
+      "journalist": {
+        "stereotype": "balanced",
+        "split": "heldout",
+        "n": 1,
+        "p_female": 1.0
+      },
+      "mechanic": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 2,
+        "p_female": 1.0
+      },
+      "nurse": {
+        "stereotype": "female",
+        "split": "train",
+        "n": 2,
+        "p_female": 1.0
+      },
+      "nutritionist": {
+        "stereotype": "female",
+        "split": "train",
+        "n": 2,
+        "p_female": 0.5
+      },
+      "pharmacist": {
+        "stereotype": "balanced",
+        "split": "heldout",
+        "n": 2,
+        "p_female": 1.0
+      },
+      "pilot": {
+        "stereotype": "male",
+        "split": "heldout",
+        "n": 1,
+        "p_female": 1.0
+      },
+      "plumber": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 1,
+        "p_female": 1.0
+      },
+      "programmer": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 3,
+        "p_female": 0.6666666666666666
+      },
+      "real estate agent": {
+        "stereotype": "balanced",
+        "split": "heldout",
+        "n": 1,
+        "p_female": 1.0
+      },
+      "scientist": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 2,
+        "p_female": 1.0
+      },
+      "secretary": {
+        "stereotype": "female",
+        "split": "train",
+        "n": 2,
+        "p_female": 1.0
+      },
+      "social worker": {
+        "stereotype": "female",
+        "split": "train",
+        "n": 3,
+        "p_female": 1.0
+      },
+      "surgeon": {
+        "stereotype": "male",
+        "split": "train",
+        "n": 1,
+        "p_female": 1.0
+      },
+      "teacher": {
+        "stereotype": "female",
+        "split": "train",
+        "n": 1,
+        "p_female": 1.0
+      },
+      "veterinarian": {
+        "stereotype": "balanced",
+        "split": "heldout",
+        "n": 1,
+        "p_female": 1.0
+      }
+    }
+  },
+  "inference": {
+    "gen_time_s": 484.87344002723694,
+    "gen_tokens": 42691,
+    "tokens_per_s": 88.04565578515067,
+    "gpu_energy": {
+      "available": true,
+      "gpus": [
+        "Tesla T4"
+      ],
+      "energy_j_per_gpu": [
+        32390.328000000038
+      ],
+      "energy_kwh": 0.008997313333333343
+    },
+    "wh_per_1k_tokens": 0.21075433541808208,
+    "peak_gpu_mem_gb": 2.1540864,
+    "model_size_mb": 1976.131328,
+    "ppl_time_s": 38.15262579917908
+  }
+}

@@ -1,0 +1,78 @@
+{
+  "tag": "step153",
+  "adapter": "/kaggle/input/notebooks/vinevixx/llm-dpo-2/dpo-bias-project/runs/dpo_qwen0.5b/checkpoint-153",
+  "four_bit": false,
+  "n_generated": 1200,
+  "usable_rate": 0.0,
+  "reasons": {
+    "no_signal": 1156,
+    "refusal": 2,
+    "truncated": 18,
+    "first_person": 19,
+    "no_name": 4,
+    "unknown_name": 1
+  },
+  "truncated_rate": 0.015,
+  "mean_new_tokens": 10.485,
+  "ppl_reference": 16.919132588354476,
+  "ppl_wikitext": 21.174342501998687,
+  "bias": {
+    "cells": {},
+    "gap": {
+      "train_occ|train_tmpl": {
+        "gap": null,
+        "ci95": null,
+        "n_female_coded": 0,
+        "n_male_coded": 0
+      },
+      "train_occ|heldout_tmpl": {
+        "gap": null,
+        "ci95": null,
+        "n_female_coded": 0,
+        "n_male_coded": 0
+      },
+      "heldout_occ|train_tmpl": {
+        "gap": null,
+        "ci95": null,
+        "n_female_coded": 0,
+        "n_male_coded": 0
+      },
+      "heldout_occ|heldout_tmpl": {
+        "gap": null,
+        "ci95": null,
+        "n_female_coded": 0,
+        "n_male_coded": 0
+      },
+      "all": {
+        "gap": null,
+        "ci95": null,
+        "n_female_coded": 0,
+        "n_male_coded": 0
+      }
+    },
+    "control_p_female": {
+      "p_female": null,
+      "n": 0
+    },
+    "per_occupation": {}
+  },
+  "inference": {
+    "gen_time_s": 271.2983374595642,
+    "gen_tokens": 12582,
+    "tokens_per_s": 46.37698895547154,
+    "gpu_energy": {
+      "available": true,
+      "gpus": [
+        "Tesla T4"
+      ],
+      "energy_j_per_gpu": [
+        18097.407000000007
+      ],
+      "energy_kwh": 0.005027057500000002
+    },
+    "wh_per_1k_tokens": 0.39954359402320794,
+    "peak_gpu_mem_gb": 2.156105728,
+    "model_size_mb": 1976.131328,
+    "ppl_time_s": 38.344704389572144
+  }
+}
