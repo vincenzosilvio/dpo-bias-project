@@ -324,6 +324,8 @@ code. Know these before you re-derive them:
   (pre-registered rule in `build_pairs.py`: |p_female - 0.5| >= 0.20 on the
   calibration half, n >= 12). Stereotype labels only group the results.
 
+  A cell counts as reduced if the 95% occupation-cluster bootstrap CI of (GAP_base − GAP_selected) excludes 0; as overshoot if the selected checkpoint's GAP CI lies entirely below 0. The held-out-occupation × held-out-template cell (~18 usable texts per side) is reported but not interpreted on its own. The 4-bit effect is claimed only if the CI of (GAP_4bit − GAP_fp32) excludes 0; otherwise we report the largest effect the data could have missed. Parity distance (below) is exploratory.
+
 ## Next concrete step
 
 Evaluation on Kaggle (see `kaggle_setup.md`, "Evaluation run"): the
