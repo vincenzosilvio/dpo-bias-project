@@ -154,3 +154,18 @@ evaluations in parallel; otherwise run 2a first.
 
 `[base] already evaluated, skipping` confirms the reuse. Expect about
 2.5 h for six checkpoints plus a 4-bit version of the selected one.
+
+## Run 3 (README, "Run 3"): supervised fine-tuning on the chosen texts
+
+Training notebook `dpo-train-v3`: the same settings and input as
+`dpo-train-v2`, with the same Cells 1–3. Cell 4:
+
+```python
+!CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py --out runs/sft_qwen0.5b_v3 \
+    --sft-only --lr 5e-5 --monitor-every 10 --stop-usable-drop 0.10
+!zip -qr /kaggle/working/run3_small.zip runs/sft_qwen0.5b_v3/resource_report.json \
+    runs/sft_qwen0.5b_v3/monitor.jsonl runs/sft_qwen0.5b_v3/split.json
+```
+
+The evaluation is as for run 2, with `sft_qwen0.5b_v3` in the glob and
+`runs/eval3` / `eval3.zip`.

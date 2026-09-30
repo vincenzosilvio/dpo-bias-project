@@ -56,6 +56,10 @@ def parse_args():
     ap.add_argument("--grad-accum", type=int, default=2)
     ap.add_argument("--save-steps", type=int, default=10)
     ap.add_argument("--eval-steps", type=int, default=10)
+    ap.add_argument("--sft-only", action="store_true",
+                    help="drop the DPO term: plain supervised fine-tuning on the CHOSEN "
+                         "(gender-swapped) texts, i.e. counterfactual data augmentation "
+                         "(TRL loss_type=['sft']). Run 3, lesson #16.")
     ap.add_argument("--sft-weight", type=float, default=0.0,
                     help="weight of an NLL term on the CHOSEN texts added to the DPO loss "
                          "(TRL loss_type=['sigmoid','sft'], RPO-style). 0 = plain DPO (run 1). "
@@ -342,7 +346,9 @@ def main():
         target_modules="all-linear", task_type="CAUSAL_LM")
 
     loss_kw = {}
-    if args.sft_weight > 0:
+    if args.sft_only:
+        loss_kw = {"loss_type": ["sft"]}
+    elif args.sft_weight > 0:
         loss_kw = {"loss_type": ["sigmoid", "sft"], "loss_weights": [1.0, args.sft_weight]}
 
     config = DPOConfig(

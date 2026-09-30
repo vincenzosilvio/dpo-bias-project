@@ -227,6 +227,40 @@ train/train cell, so the selected train/train GAP is optimistic. The
 held-out cells stay the clean test. If no checkpoint passes, that is the
 result, and there is no third run before the application deadline.
 
+### Run 2 outcome (from the training monitor)
+
+Run 2a (lr 1e-5) **stopped early at step 20** under the pre-registered
+rule. On the monitor's 96 train-cell texts, usable went 66% → 55% → 44%,
+first-person texts 8% → 20% → 40%, and GAP +0.69 → +0.75 → +0.54
+(n = 42–63, too few to read). The drift toward first person started
+while the DPO margin was still tiny (0.04 at step 10), so the extra
+fine-tuning term with weight 1 did not stop it. Run 2b (lr 3e-5):
+[to be filled in].
+
+**Likely mechanism (lesson #16).** Every pair's contrast starts at the
+very first token, the name. Rejected texts start with the model's own
+favourite names (a few names, repeated). Chosen texts start with
+replacement names drawn uniformly from 21–44 names (a lesson #12 fix, to
+stop DPO from learning "prefer John"). Pushing down a few frequent
+first-token names and spreading the push-up over many rare ones frees
+probability at the first token, and "I" / "As" / "The" absorb it:
+first-person openings. The fine-tuning term cannot hold this back at
+weight 1. It is a per-token mean (about 1/100 per token for a
+100-token text), while the DPO term acts on the sequence sum (β = 0.1
+per token), so at the first token DPO pulls about 10 times harder.
+
+## Run 3 (fixed 2026-09-30, after run 2 stopped, before run 3 was run)
+
+Plain supervised fine-tuning on the 402 chosen (gender-swapped) texts:
+counterfactual data augmentation, with no DPO term (`--sft-only`). It
+only raises the likelihood of in-distribution third-person texts, so
+the displacement mechanism above cannot act. Everything else is as in
+run 2: lr 5e-5 (run 1's; stable for LoRA), 3 epochs, the same monitor
+and early-stop rule, the same evaluation, selection rule and quality
+guard. This run was decided **after** runs 1 and 2 failed, and it is
+reported as such. The held-out occupations and templates were never
+used for any of these choices.
+
 ## Next steps
 
 1. With a checkpoint that passes the guard, run the planned question:
