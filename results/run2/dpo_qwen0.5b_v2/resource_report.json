@@ -1,0 +1,213 @@
+{
+  "args": {
+    "pairs": "/kaggle/working/dpo-bias-project/data/short/dpo_pairs.jsonl",
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "out": "runs/dpo_qwen0.5b_v2",
+    "seed": 42,
+    "eval_frac": 0.1,
+    "beta": 0.1,
+    "max_length": 512,
+    "epochs": 3,
+    "lr": 1e-05,
+    "batch_size": 4,
+    "grad_accum": 2,
+    "save_steps": 10,
+    "eval_steps": 10,
+    "sft_weight": 1.0,
+    "monitor_every": 10,
+    "monitor_prompts": 24,
+    "monitor_samples": 4,
+    "stop_usable_drop": 0.1,
+    "lora_r": 16,
+    "lora_alpha": 32,
+    "lora_dropout": 0.05,
+    "no_carbontracker": false,
+    "dtype": "auto"
+  },
+  "n_pairs": {
+    "train": 402,
+    "eval": 44
+  },
+  "dtype": "torch.float32",
+  "trainable_params": 8798208,
+  "total_params": 502830976,
+  "wall_time_s": 912.361496925354,
+  "peak_gpu_mem_gb": 8.751036928,
+  "gpu_energy_nvml": {
+    "available": true,
+    "gpus": [
+      "Tesla T4"
+    ],
+    "energy_j_per_gpu": [
+      53750.893
+    ],
+    "energy_kwh": 0.01493080361111111
+  },
+  "carbontracker": [
+    {
+      "components": {
+        "gpu": {
+          "avg_power_usages (W)": "[[59.95701757]]",
+          "avg_energy_usages (J)": "[[41120.9209299]]",
+          "epoch_durations (s)": "[685.84]",
+          "devices": [
+            "Tesla T4"
+          ]
+        }
+      },
+      "actual": {
+        "epochs": 1,
+        "duration (s)": 686.0,
+        "energy (kWh)": 0.01803983965,
+        "co2eq (g)": 6.919166065733,
+        "equivalents": {
+          "km travelled by car": 0.064786199117
+        }
+      },
+      "pred": {
+        "epochs": 3,
+        "duration (s)": 2058.0,
+        "energy (kWh)": 0.054142516993,
+        "co2eq (g)": 20.766319078705,
+        "equivalents": {
+          "km travelled by car": 0.194441189876
+        }
+      }
+    }
+  ],
+  "monitor": {
+    "time_s": 732.570023059845,
+    "gpu_energy_kwh": 0.011608080833333333,
+    "step0_usable_rate": 0.65625,
+    "early_stop_rule": 0.1
+  },
+  "global_steps": 20,
+  "log_history": [
+    {
+      "loss": 2.450299835205078,
+      "grad_norm": 7.238890647888184,
+      "learning_rate": 2.5e-06,
+      "entropy": 2.1602648735046386,
+      "num_tokens": 19880.0,
+      "logits/chosen": -2.580675170555704,
+      "logits/rejected": -2.604898936844445,
+      "mean_token_accuracy": 0.5078902304172516,
+      "rewards/chosen": 0.007521019177511334,
+      "rewards/rejected": 0.0014150238304864616,
+      "rewards/accuracies": 0.55,
+      "rewards/margins": 0.006105995364487171,
+      "logps/chosen": -196.0379867553711,
+      "logps/rejected": -184.5466506958008,
+      "epoch": 0.09900990099009901,
+      "step": 5
+    },
+    {
+      "loss": 2.436544990539551,
+      "grad_norm": 4.3322858810424805,
+      "learning_rate": 5.625e-06,
+      "entropy": 2.1752858638763426,
+      "num_tokens": 39588.0,
+      "logits/chosen": -2.5549680155876358,
+      "logits/rejected": -2.5630710670272006,
+      "mean_token_accuracy": 0.5067222595214844,
+      "rewards/chosen": 0.060221482440829276,
+      "rewards/rejected": 0.01695430800318718,
+      "rewards/accuracies": 0.925,
+      "rewards/margins": 0.04326717518270016,
+      "logps/chosen": -191.1599853515625,
+      "logps/rejected": -180.75597457885743,
+      "epoch": 0.19801980198019803,
+      "step": 10
+    },
+    {
+      "eval_loss": 2.4152963161468506,
+      "eval_runtime": 17.5973,
+      "eval_samples_per_second": 2.5,
+      "eval_steps_per_second": 0.625,
+      "eval_entropy": 2.17788349498402,
+      "eval_num_tokens": 39588.0,
+      "eval_logits/chosen": -2.651157614233515,
+      "eval_logits/rejected": -2.6535781064994834,
+      "eval_mean_token_accuracy": 0.5070354315367612,
+      "eval_rewards/chosen": 0.11076669877564366,
+      "eval_rewards/rejected": 0.019104060462929985,
+      "eval_rewards/accuracies": 0.8863636363636364,
+      "eval_rewards/margins": 0.09166263890537349,
+      "eval_logps/chosen": -171.16972767223012,
+      "eval_logps/rejected": -160.39481006969106,
+      "epoch": 0.19801980198019803,
+      "step": 10
+    },
+    {
+      "loss": 2.446254348754883,
+      "grad_norm": 5.083831310272217,
+      "learning_rate": 8.750000000000001e-06,
+      "entropy": 2.1997493267059327,
+      "num_tokens": 59438.0,
+      "logits/chosen": -2.5217146642720487,
+      "logits/rejected": -2.5272725737277755,
+      "mean_token_accuracy": 0.48650932013988496,
+      "rewards/chosen": 0.15645311921834945,
+      "rewards/rejected": 0.05873107928782702,
+      "rewards/accuracies": 0.975,
+      "rewards/margins": 0.09772203657776117,
+      "logps/chosen": -198.11221466064453,
+      "logps/rejected": -190.07032012939453,
+      "epoch": 0.297029702970297,
+      "step": 15
+    },
+    {
+      "loss": 2.3590322494506837,
+      "grad_norm": 4.107186317443848,
+      "learning_rate": 9.988173129447251e-06,
+      "entropy": 2.1547886610031126,
+      "num_tokens": 78478.0,
+      "logits/chosen": -2.579480732373873,
+      "logits/rejected": -2.5880800877890917,
+      "mean_token_accuracy": 0.4961740761995316,
+      "rewards/chosen": 0.2761793531477451,
+      "rewards/rejected": 0.08268003277480603,
+      "rewards/accuracies": 0.975,
+      "rewards/margins": 0.19349931925535202,
+      "logps/chosen": -177.10065765380858,
+      "logps/rejected": -167.89854278564454,
+      "epoch": 0.39603960396039606,
+      "step": 20
+    },
+    {
+      "eval_loss": 2.319506883621216,
+      "eval_runtime": 17.7187,
+      "eval_samples_per_second": 2.483,
+      "eval_steps_per_second": 0.621,
+      "eval_entropy": 2.1389291286468506,
+      "eval_num_tokens": 78478.0,
+      "eval_logits/chosen": -2.6506504815603327,
+      "eval_logits/rejected": -2.644428448298228,
+      "eval_mean_token_accuracy": 0.509888459335674,
+      "eval_rewards/chosen": 0.3112021786245433,
+      "eval_rewards/rejected": 0.04752570136704228,
+      "eval_rewards/accuracies": 0.9318181818181818,
+      "eval_rewards/margins": 0.2636764733628793,
+      "eval_logps/chosen": -169.16537753018466,
+      "eval_logps/rejected": -160.11059847745028,
+      "epoch": 0.39603960396039606,
+      "step": 20
+    },
+    {
+      "train_runtime": 911.9664,
+      "train_samples_per_second": 1.322,
+      "train_steps_per_second": 0.168,
+      "total_flos": 215987066050560.0,
+      "train_loss": 2.423032855987549,
+      "epoch": 0.39603960396039606,
+      "step": 20
+    }
+  ],
+  "versions": {
+    "torch": "2.10.0+cu128",
+    "transformers": "5.0.0",
+    "trl": "1.14.0",
+    "peft": "0.21.0"
+  },
+  "device": "Tesla T4"
+}

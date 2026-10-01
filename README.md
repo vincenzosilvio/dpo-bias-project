@@ -1,18 +1,20 @@
-# DPO for Gender-Occupation Bias in a Small LLM: Results, Cost and a Documented Failure
+# Fine-Tuning a Small LLM against Gender-Occupation Bias: DPO Failures, a Working Fix, and What It Costs
 
-**TL;DR.** I fine-tuned Qwen2.5-0.5B-Instruct with DPO + LoRA on 446
-counterfactual preference pairs to reduce gender-occupation bias in
-generated text, and measured the compute cost of every step. Training was
-cheap (24 min and 26 Wh on one T4) and every offline DPO metric looked
-healthy. The evaluation criteria were fixed before any results existed,
-and on generated text **the model collapsed**: the share of usable texts
-fell from 57% to 27% after 10 steps and to 4% after 20. The model stopped
-writing about gendered third-person characters. No checkpoint passed the
-pre-registered quality guard, so **this run makes no debiasing claim.** A
-second finding came from the same pipeline: 4-bit NF4 quantization of the
-base model changed the bias by less than we can detect (ΔGAP −0.06,
-95% CI [−0.22, +0.07]). It cut memory by 77%, but it cost 29% more GPU
-energy per generated token and 84% more per usable text on a T4.
+**TL;DR.** On Qwen2.5-0.5B-Instruct, with 446 counterfactual pairs and 21
+minutes / 23.5 Wh of LoRA training on one T4, **supervised fine-tuning on
+gender-swapped texts cut the gender-occupation gap in generated text from
++0.61 to +0.04.** It also generalised: on occupations never trained on,
+the gap fell by −0.49 (95% CI [−0.69, −0.28]), and on prompt templates
+never trained on by −0.61 [−0.93, −0.27]. Text quality held: usable texts
+rose from 57% to 76%, and WikiText perplexity moved +2.7%. **Plain DPO
+on the same pairs failed twice.** Run 1 collapsed the model, which
+stopped writing gendered third-person texts. Run 2 (DPO + NLL) drifted
+toward first-person narration and was stopped by the early-stop rule.
+In both, every offline DPO metric looked healthy; only the pre-registered
+check on generated text caught it. **4-bit NF4 quantization** of the
+debiased model moved the gap back by +0.10 [−0.11, +0.30]: not
+significant at this sample size, but in the direction that matters for
+deploying small debiased models.
 
 ## Motivation
 
@@ -42,22 +44,110 @@ gain.
    (pronouns, name, title, role nouns; `counterfactual.py`). 3,600
    completions gave 446 pairs across 14 occupations (211 male→female,
    235 female→male). There are 42 unit and regression tests.
-4. **DPO.** `trl` 1.14 DPOTrainer, LoRA r=16 on all linear layers
-   (8.8M trainable parameters, 1.75%), β=0.1, lr 5e-5, 3 epochs =
-   153 steps, checkpoints every 10 steps.
-5. **Evaluation** (`evaluate.py`). The base model, six checkpoints and
-   the base model in 4-bit NF4 each generate 1,200 fresh texts (150
-   prompts × 8, new seed). The grid is {train, held-out occupations} ×
-   {train, held-out templates}. Metrics: GAP = p_female(female-coded) −
-   p_female(male-coded), usable rate, perplexity, tokens/s, GPU energy
-   (NVML). **Pre-registered selection rule:** among checkpoints whose
-   usable rate is at most 10 points below the base model's, take the
-   smallest |GAP| on train occupations × train templates.
-6. **Analysis** (`analyze_eval.py`, CPU only). Occupation-cluster
-   bootstrap CIs, a paired base-vs-4-bit comparison, quality diagnostics
-   and the figures below.
+4. **Training** (`train_dpo.py`, `trl` 1.14, LoRA r=16 on all linear
+   layers, 8.8M trainable parameters, 1.75%). Three objectives on the
+   same pairs:
+   - run 1: plain DPO (β 0.1, lr 5e-5)
+   - run 2: DPO + NLL on chosen (lr 1e-5 and 3e-5)
+   - run 3: supervised fine-tuning on the chosen texts only (lr 5e-5)
 
-## Results
+   Each runs 3 epochs (153 steps), with checkpoints every 10 steps. From
+   run 2 on, a generation monitor runs every 10 steps with an early-stop
+   rule.
+5. **Evaluation** (`evaluate.py`). Each model writes 1,200 fresh texts
+   (150 prompts × 8, new seed), on the grid {train, held-out
+   occupations} × {train, held-out templates}. Metrics: GAP =
+   p_female(female-coded) − p_female(male-coded), usable rate,
+   perplexity, tokens/s, GPU energy (NVML). **Pre-registered selection
+   rule:** among checkpoints whose usable rate is at most 10 points below
+   the base model's, take the smallest |GAP| on train occupations ×
+   train templates. The selected checkpoint and the base model are also
+   evaluated in 4-bit NF4.
+6. **Analysis** (`analyze_eval.py`, `analyze_finetune.py`, CPU only).
+   Occupation-cluster bootstrap CIs, paired comparisons with the same
+   occupation draws, per-occupation shifts, and figures.
+
+## Results: run 3, supervised fine-tuning on counterfactual texts
+
+![trajectory](results/analysis3/fig4_finetune_trajectory.png)
+
+The rule selected **step 100**. Every run-3 checkpoint passed the
+quality guard.
+
+| model | usable | GAP train occ / train tmpl | GAP train occ / held-out tmpl | GAP held-out occ / train tmpl | GAP held-out occ / held-out tmpl | per-occupation distance from 50/50 | WikiText ppl |
+|---|---|---|---|---|---|---|---|
+| base | 57% | +0.61 [+0.39, +0.80] | +0.66 [+0.42, +0.88] | +0.89 [+0.73, +1.00] | +0.79 [+0.58, +0.96]* | 0.36 | 18.97 |
+| **step 100 (selected)** | **76%** | **+0.04 [−0.11, +0.17]** | **+0.05 [−0.16, +0.25]** | **+0.38 [+0.12, +0.62]** | **+0.32 [+0.00, +0.61]*** | **0.13** | **19.48** |
+| step 100, 4-bit | 63% | +0.14 [−0.01, +0.28] | +0.13 [−0.08, +0.32] | +0.37 [+0.14, +0.61] | +0.48 [+0.18, +0.74]* | 0.10 | 21.35 |
+
+Brackets are 95% occupation-cluster bootstrap CIs. \* = fewer than 30
+usable texts per side in the base model. Full table for all checkpoints:
+`results/analysis3/tables.md`.
+
+**Paired change, step 100 − base** (same occupation draws for both):
+
+| cell | ΔGAP [95% CI] | how clean a test |
+|---|---|---|
+| train occupations, train templates | −0.57 [−0.78, −0.36] | optimistic: the selection cell |
+| train occupations, **held-out templates** | **−0.61 [−0.93, −0.27]** | clean for new prompts |
+| **held-out occupations**, all templates | **−0.49 [−0.69, −0.28]** | clean for new occupations (2 per side) |
+| held-out occupations, held-out templates | −0.47 [−0.84, −0.09] | clean, small |
+
+![per occupation](results/analysis3/fig5_per_occupation.png)
+
+- **The bias generalised beyond the training data.** Pilot went 0.04 →
+  0.38 female and electrician 0.05 → 0.29; librarian went 0.96 → 0.69
+  and hairdresser 0.85 → 0.71. None of these were trained on. The control
+  occupations moved toward parity too (veterinarian 1.00 → 0.50,
+  pharmacist 0.81 → 0.44). The model weakened the occupation → gender
+  association in general, not only for the 14 trained occupations.
+- **Some overshoot.** Teacher went 0.79 → 0.13 female, past parity, and
+  receptionist 0.88 → 0.33. CEO moved *against* its training direction
+  (0.45 → 0.29). At about 30–40 texts per occupation, single-occupation
+  values carry ±0.15 of noise. Still, GAP near 0 on average does not mean
+  every occupation sits at 50/50.
+- **Quality.** The usable rate went *up*, 57% → 76% (fewer first-person
+  and multi-person texts), and names became more varied (71 → 92
+  distinct; "John" fell from 32% to 7% of texts). Two costs: WikiText
+  perplexity rose 2.7% (18.97 → 19.48), and **texts drifting into
+  Chinese** rose from 0.4% to 4.3% (e.g. "herding all客户的头发…"). The
+  usable filter does not catch the latter, so it is a real quality loss
+  that the headline numbers do not show.
+- **Same-prompt examples** (base vs step 100, held-out occupations):
+  `results/analysis3/examples.md`.
+
+**4-bit quantization after fine-tuning**
+
+![quantization](results/analysis3/fig6_quantization_after_finetune.png)
+
+| paired change (4-bit − fp32) | train occ / train tmpl | train occ / held-out tmpl | held-out occ / held-out tmpl |
+|---|---|---|---|
+| base model | −0.07 [−0.30, +0.12] | −0.03 [−0.25, +0.19] | −0.26 [−0.70, +0.11] |
+| fine-tuned (step 100) | +0.10 [−0.11, +0.30] | +0.08 [−0.20, +0.35] | +0.16 [−0.29, +0.58] |
+
+Interaction (the 4-bit effect after fine-tuning minus the 4-bit effect on
+the base model), train occupations, all templates: **+0.15 [−0.07, +0.40]**.
+On the base model, quantization did not increase the gap. On the
+debiased model, the point estimates go back toward the original bias,
+but no CI excludes 0. This is the question to settle with more samples
+and more models. Usable texts fell 76% → 63%. The 4-bit model ran slower
+(42 vs 113 tok/s) and used 75% more GPU energy per 1k tokens (0.284 vs
+0.162 Wh). Part of that is because the LoRA adapter stays unmerged on
+NF4 weights, so this is not a clean deployment comparison.
+
+**Cost of run 3** (`results/run3/resource_report.json`, NVML, one T4):
+the full 153 steps took 83.4 min and 83.1 Wh, of which the generation
+monitor accounted for 62.4 min and 59.6 Wh. **Training alone: 21.0 min
+and 23.5 GPU-Wh**, with peak memory 7.4 GB. Carbontracker, which counts the
+monitor and applies its default PUE of 1.58, reports 126 Wh and 48 gCO2eq.
+The selected checkpoint (step 100) needed about two thirds of the
+training. For comparison, evaluating one model (1,200 generations plus
+perplexity) costs about 20–25 min and 23 Wh, about as much as training
+it. The monitor log (`results/run3/monitor.jsonl`) matches the
+evaluation: GAP +0.69 → about 0 by step 100, with usable texts at 75–89%
+throughout.
+
+## Run 1 in detail: plain DPO collapsed
 
 ### 1. DPO collapsed the model before it reduced the bias
 
@@ -152,26 +242,31 @@ evaluation costs more than the training: 23–32 Wh per full-length model
 to generate 1,200 texts, and about 2.3 h of generation and perplexity
 for all eight models.
 
-## What this run shows, and what it doesn't
+## What the project shows, and what it doesn't
 
-- ✅ A pipeline that measures generation bias with prompts that don't
-  leak the answer, directions taken from the model, held-out occupations
-  and templates, and cluster-aware CIs.
-- ✅ A pre-registered generation-based guard that caught a failure every
-  offline metric missed. This is the main methodological point: **judge
-  DPO for bias by what the model generates, not by reward accuracy or
-  perplexity.**
-- ✅ A measured cost profile of NF4 on a T4: memory down, energy per
-  useful output up.
-- ❌ No evidence that DPO reduced bias. The run failed before that could
-  be tested.
-- ❌ No evidence about quantization and DPO together: the rule selected
-  no checkpoint to quantize.
+- ✅ A small, cheap fine-tune on counterfactual texts **reduced
+  gender-occupation bias in generation, and the effect generalised** to
+  unseen prompts and unseen occupations. The checkpoint was chosen by a
+  rule fixed before the results, and quality was guarded.
+- ✅ **Plain DPO on minimal-edit counterfactual pairs failed in a
+  specific, repeatable way:** generations drifted away from the format
+  the pairs share, while reward accuracy stayed above 0.9. A
+  generation-based monitor caught it. Judge alignment for bias by what
+  the model generates.
+- ✅ Measured costs: training in minutes and tens of Wh. NF4 cut memory
+  by 77% but did not save energy on a T4 for this model size.
+- ⚠️ A hint, not a finding, that 4-bit quantization partly undoes
+  debiasing. The interaction is +0.15, with a CI that includes 0.
+- ❌ No working DPO variant yet. The first-token explanation (lesson #16)
+  is a hypothesis.
+- ❌ One model (0.5B), one seed, one family of short templates.
 
 ## Limitations
 
-- **One model, one seed, one hyperparameter setting.** The collapse may
-  be specific to lr 5e-5 with LoRA on all layers. Nothing was tuned.
+- **One model, one seed, one hyperparameter setting per run.** Runs 2
+  and 3 were designed after seeing run 1 (and run 3 after run 2). The
+  order is recorded in this README, and the held-out cells were never
+  used for any choice.
 - **Post-hoc analysis choices.** The occupation-cluster bootstrap, the
   30-texts-per-side threshold, the parity metric and the pronoun
   diagnostics were chosen after the results were seen. They are
@@ -191,6 +286,11 @@ for all eight models.
 - **Binary gender.** The metric counts he vs she only. Texts using
   "they" are excluded, not counted as neutral. Some of the DPO models'
   "they" texts may be a reasonable outcome that GAP cannot credit.
+- **Language drift.** Fine-tuned models sometimes switch to Chinese
+  mid-text (4.3% at step 100 vs 0.4% at base). The usable filter does
+  not exclude such texts.
+- **The aggregate hides per-occupation overshoot** (teacher 0.79 → 0.13).
+  GAP rewards the averages crossing, not each occupation reaching parity.
 - **Energy figures** are GPU-only NVML readings from one run per model
   on shared cloud hardware.
 - Long-form transfer, WinoBias/BOLD and a larger model were planned and
@@ -229,155 +329,63 @@ result, and there is no third run before the application deadline.
 
 ### Run 2 outcome (from the training monitor)
 
-Run 2a (lr 1e-5) **stopped early at step 20** under the pre-registered
-rule. On the monitor's 96 train-cell texts, usable went 66% → 55% → 44%,
-first-person texts 8% → 20% → 40%, and GAP +0.69 → +0.75 → +0.54
-(n = 42–63, too few to read). The drift toward first person started
-while the DPO margin was still tiny (0.04 at step 10), so the extra
-fine-tuning term with weight 1 did not stop it. Run 2b (lr 3e-5):
-[to be filled in].
+Both variants **stopped early at step 20** under the pre-registered rule.
+Monitor: 96 train-cell texts per check, same seed each time. Data in
+`results/run2/`.
 
-**Likely mechanism (lesson #16).** Every pair's contrast starts at the
-very first token, the name. Rejected texts start with the model's own
-favourite names (a few names, repeated). Chosen texts start with
-replacement names drawn uniformly from 21–44 names (a lesson #12 fix, to
-stop DPO from learning "prefer John"). Pushing down a few frequent
-first-token names and spreading the push-up over many rare ones frees
-probability at the first token, and "I" / "As" / "The" absorb it:
-first-person openings. The fine-tuning term cannot hold this back at
-weight 1. It is a per-token mean (about 1/100 per token for a
-100-token text), while the DPO term acts on the sequence sum (β = 0.1
-per token), so at the first token DPO pulls about 10 times harder.
+| step | 2a (lr 1e-5): usable / first person / GAP (n) | 2b (lr 3e-5): usable / first person / GAP (n) |
+|---|---|---|
+| 0 | 66% / 8% / +0.69 (63) | 66% / 8% / +0.69 (63) |
+| 10 | 55% / 20% / +0.75 (53) | 41% / 36% / +0.68 (39) |
+| 20 | 44% / 40% / +0.54 (42) | 38% / 26% / **+0.15 (36)** |
+
+- The texts drifted toward first person again, faster at the higher
+  learning rate.
+- **Unlike run 1**, the chosen texts' log-probability *rose* on the
+  held-out pairs (2b: −171 → −168), so the extra fine-tuning term did
+  its job in aggregate. Still, generations changed.
+- 2b at step 20 shows the first large GAP drop (+0.69 → +0.15). It rests
+  on 36 texts (CI roughly ±0.3), at a checkpoint that fails the quality
+  guard, so it is a hint, not a result.
+- The monitor cost more than the training: about 12 of 15 min and 11.6
+  of 14.9 Wh per variant (reported separately).
+
+**Hypothesis (lesson #16), not yet tested.** The pair contrast starts at
+the very first token, the name. Rejected texts open with the model's few
+favourite names. Chosen texts open with names drawn uniformly from
+21–44 (a lesson #12 fix). Pushing down a few frequent opening tokens
+and spreading the push-up over many rare ones frees probability at the
+first token, and "I" / "As" / "The" can absorb it. The fine-tuning term
+does not hold this back at weight 1: it is a per-token mean (about 1/100
+per token), while the DPO term acts on the sequence sum (β = 0.1 per
+token). A test would compare first-token distributions before and after
+training, or rerun with the name tokens masked out of the DPO loss.
 
 ## Run 3 (fixed 2026-09-30, after run 2 stopped, before run 3 was run)
 
 Plain supervised fine-tuning on the 402 chosen (gender-swapped) texts:
 counterfactual data augmentation, with no DPO term (`--sft-only`). It
 only raises the likelihood of in-distribution third-person texts, so
-the displacement mechanism above cannot act. Everything else is as in
+the first-token effect hypothesised above has no DPO push-down to act on. Everything else is as in
 run 2: lr 5e-5 (run 1's; stable for LoRA), 3 epochs, the same monitor
 and early-stop rule, the same evaluation, selection rule and quality
 guard. This run was decided **after** runs 1 and 2 failed, and it is
 reported as such. The held-out occupations and templates were never
 used for any of these choices.
 
-Wording note: fine-tuning does lower the probability of the model's
-favourite names too (the softmax sums to 1). The difference from DPO is
-where the mass goes: to the chosen texts, which are in-distribution, and
-not to whatever else is nearby, such as "I" or "As".
-
-Cost note: the run uses `DPOTrainer` with `loss_type=["sft"]`, and the
-training log still reports `logps/rejected` and `rewards/*`. So TRL
-still runs the forward passes on the rejected texts and on the
-reference model, even though the loss does not use them. The reported
-training time and energy are therefore higher than a plain SFT run
-would need, and should be read as an upper bound.
-
-## Run 4, conditional (fixed 2026-09-30, during run 3 training, before any run 3 evaluation)
-
-**Why.** In the standard recipe, DPO starts from a fine-tuned model,
-and that fine-tuned model is also the reference. The original DPO paper
-does this too: when no fine-tuned model exists, it first fine-tunes on
-the preferred completions. Runs 1 and 2 ran DPO directly on the base
-model. That is the setting where likelihood displacement is worst: the
-chosen texts start out of distribution (lesson #16). Run 4 tests the
-standard recipe, DPO on top of run 3. It changes only the starting
-point relative to run 2a, so run 2a vs run 4 isolates the effect of the
-fine-tuning stage.
-
-This section was written while run 3 was training. At that point only
-run 3's training monitor had been seen (96 train-cell texts per check).
-No run 3 evaluation had been run, and no held-out cell had been looked
-at. It replaces run 2's "no third run before the deadline": run 4 is
-run only if the conditions below hold.
-
-### Conditions: run 4 is run only if all hold
-
-The conditions use only the train/train cell and the usable rate, the
-same information the selection rule uses. The held-out cells are never
-used to decide whether run 4 happens.
-
-| # | condition | reason |
-|---|---|---|
-| C1 | Run 3's evaluation selects a checkpoint, i.e. one passes the unchanged quality guard | DPO needs a working starting model |
-| C2 | The selected checkpoint's train/train GAP is **≥ +0.20** (point estimate) | The pairs always push toward the minority gender. With less residual gap, DPO would mostly push past parity (overshoot = failure). +0.20 is the same margin as the calibration rule in `build_pairs.py` |
-| C3 | The code changes below are written and tested (unit test plus a 1-epoch smoke run on the Kaggle T4) before the full run, and nothing else changes | Keeps run 4 comparable to run 2a |
-
-If C1 or C2 fails, there is no run 4. That is reported as the outcome
-("SFT alone reached GAP X; DPO on top was not run because ..."), not
-hidden. If C1–C3 hold but there is no time before the deadline, that is
-said too. It is a practical limit, not a result.
-
-### Settings (fixed now)
-
-| | run 2a | run 4 |
-|---|---|---|
-| starting model | base Qwen2.5-0.5B-Instruct | base + **run 3's selected adapter, merged** (`merge_and_unload`) |
-| reference model | base (adapter disabled) | the merged run 3 model (new adapter disabled) |
-| trainable | new LoRA r 16, α 32, dropout 0.05, all linear layers | same (a new adapter on the merged model) |
-| loss | DPO sigmoid + NLL on chosen, weight 1.0 | same |
-| β, lr, schedule | 0.1, 1e-5 cosine, warmup 10% | same |
-| data | 446 pairs, 402 train / 44 held out (seed 42) | same pairs, same split |
-| epochs, effective batch, checkpoints | 3 (153 steps), 8, every 10 steps | same |
-| monitor, early stop | 24 train-cell prompts × 4 every 10 steps; stop at usable > 10 points below step 0 at 2 consecutive checks | same. Step 0 is now the run 3 model, so the stop is relative to it |
-
-The run-2a settings are reused unchanged on purpose. They are the
-cautious variant, and reusing them means no hyperparameter is chosen
-after seeing run 3.
-
-### Evaluation (fixed now)
-
-- **Same `evaluate.py`, same prompts, seed 1234, 8 samples per prompt**,
-  checkpoints 10, 20, 40, 60, 100 and 153 (or those that exist plus the
-  last one, if training stops early). Each checkpoint is loaded as base
-  + run 3 adapter merged + run 4 adapter.
-- **Quality guard and selection rule unchanged:** usable rate at most 10
-  points below the *base model's* (57%). Among those checkpoints, take
-  the smallest |GAP| on train occupations × train templates; ties go to
-  the earlier step. The run 3 model is also a candidate ("step 0"). So
-  if every run 4 checkpoint is worse, the rule picks the run 3 model and
-  that is the result: DPO added nothing.
-- **Primary comparison, run 4 selected vs run 3 selected:** GAP
-  difference on **train occupations × held-out templates**, with a paired
-  occupation-cluster bootstrap 95% CI (as for base vs 4-bit). This cell
-  was never used for selection and has 14 occupation clusters. The
-  held-out occupation cells (2 occupations per side) are reported but
-  are too small to decide on. "DPO on top helped" is claimed only if the
-  CI of ΔGAP excludes 0 and the usable rate stays within 10 points of
-  run 3's.
-- **Overshoot counts as failure** (Evaluation design decisions). Along
-  with GAP, the per-occupation distance from parity |p_female − 0.5|
-  is reported, so a GAP near 0 made of opposite flips is visible
-  (exploratory, as in run 1's analysis).
-- **Reported as for every model:** control-group p_female, usable rate
-  and exclusion reasons, first-person rate, perplexity (reference and
-  WikiText-2), tokens/s, GPU Wh per 1k tokens. Run 4's training energy is
-  reported next to run 3's, and the combined SFT + DPO cost is reported
-  as the cost of the recipe.
-- **4-bit:** run 3's selected checkpoint is evaluated in NF4 in any
-  case. If run 4 is run and its rule selects a run 4 checkpoint, that
-  one is evaluated in NF4 too.
-
-### Code needed (not written yet; nothing else changes)
-
-- `train_dpo.py --init-adapter <dir>`: load the base model, apply the
-  adapter, `merge_and_unload()`, then continue exactly as now. The
-  reference is then automatically the merged model, via `ref_model=None`
-  with the new LoRA disabled.
-- `evaluate.py --init-adapter <dir>`: the same merge before each run 4
-  checkpoint adapter is loaded, and the run 3 model evaluated as step 0.
-- A unit test that with `--init-adapter`, the merged model's logits
-  equal base + run 3 adapter before training.
-
 ## Next steps
 
-1. With a checkpoint that passes the guard, run the planned question:
-   does NF4 change the bias of a debiased model differently than that of
-   the base model?
-2. Report bias per joule (performance-per-resource) instead of bias and
-   energy side by side.
-3. Long-form transfer (templates already in `occupations.py`), the
-   manual audit of the pair sample, a second seed.
+1. **Settle the quantization interaction** (+0.15, CI includes 0): more
+   samples per prompt, a merged-adapter 4-bit model (the realistic
+   deployment case), and GPTQ / 8-bit next to NF4.
+2. **DPO done the standard way:** start DPO from the run-3 checkpoint
+   (SFT → DPO), and test the first-token hypothesis with same-name pairs
+   ("Alex… his" vs "Alex… her").
+3. Fix the language drift (a language filter, or a Chinese-token check
+   in the usable rule), per-occupation overshoot control, a second seed,
+   a second model size.
+4. Report bias reduction per joule (performance-per-resource) instead
+   of bias and energy side by side.
 
 ## Reproduce
 
@@ -391,7 +399,8 @@ python src/generate_dataset.py --template-set short --samples-per-prompt 24
 python src/build_pairs.py && python src/review_sample.py --sample-size 25
 CUDA_VISIBLE_DEVICES=0 python src/train_dpo.py                                 # 24 min
 python src/evaluate.py --run-dir runs/dpo_qwen0.5b --raw data/short/raw_completions.jsonl --out-dir results/eval   # ~2.5 h
-python src/analyze_eval.py --eval-dir results/eval --out results/analysis      # CPU, ~1 min
+python src/analyze_eval.py --eval-dir results/eval --out results/analysis      # run 1, CPU, ~1 min
+python src/analyze_finetune.py --eval-dir results/eval3 --out results/analysis3 # run 3, CPU
 ```
 
 `results/` holds the evaluation outputs from the run reported above
@@ -698,9 +707,12 @@ dpo-bias-project/
 │   ├── review_sample.py      # funnel, calibration, baseline, audit sample
 │   ├── train_dpo.py          # DPO + LoRA, checkpoints, energy measurement
 │   ├── evaluate.py           # bias / quality / cost of base, checkpoints, 4-bit (GPU)
-│   └── analyze_eval.py       # cluster CIs, diagnostics, figures (CPU)
+│   ├── analyze_eval.py       # cluster CIs, diagnostics, figures (CPU)
+│   └── analyze_finetune.py   # paired comparisons for a run that passed (CPU)
 ├── results/                  # outputs of the reported run
-│   ├── eval/<model>/         # completions.jsonl, metrics.json; summary.md/json
+│   ├── eval/, eval3/         # run 1 / run 3: <model>/completions.jsonl, metrics.json, summary
+│   ├── analysis3/            # run 3 tables, examples, fig4-6
+│   ├── run2/, run3/          # training reports + monitor logs
 │   ├── analysis/             # analysis.json, tables.md, fig1-3
 │   ├── resource_report.json  # training cost + full training log
 │   ├── split.json, dpo_pairs.jsonl
