@@ -169,3 +169,24 @@ Training notebook `dpo-train-v3`: the same settings and input as
 
 The evaluation is as for run 2, with `sft_qwen0.5b_v3` in the glob and
 `runs/eval3` / `eval3.zip`.
+
+## Run 4: focused quantization evaluation (README, "Run 4")
+
+Notebook `dpo-eval-v4`, a committed run with GPU T4 and Internet on. Input:
+**`dpo-train-v3`** (it holds the run-3 checkpoints and the raw
+completions). Setup cells as usual (clone, `pip install`,
+`pip uninstall -y -q torchao`, pytest), then:
+
+```python
+import glob, os
+run = os.path.dirname(glob.glob("/kaggle/input/**/runs/sft_qwen0.5b_v3/resource_report.json", recursive=True)[0])
+raw = glob.glob("/kaggle/input/**/data/short/raw_completions.jsonl", recursive=True)[0]
+print(run, raw)
+!python src/evaluate.py --run-dir {run} --raw {raw} --out-dir runs/eval4 \
+    --variants base,base_4bit,step100,step100_4bit_merged --samples-per-prompt 24
+!zip -qr /kaggle/working/eval4.zip runs/eval4
+```
+
+Expect about 5.5 h: roughly 1 h per fp32 model and 1.5–2 h per 4-bit
+model. Send `eval4.zip`, then run:
+`python src/analyze_finetune.py --eval-dir results/eval4 --out results/analysis4 --selected step100 --quant-suffix _4bit_merged`

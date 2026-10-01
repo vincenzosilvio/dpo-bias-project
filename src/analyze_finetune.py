@@ -42,6 +42,14 @@ def parse_args():
     ap.add_argument("--eval-dir", default=str(REPO_ROOT / "results" / "eval3"))
     ap.add_argument("--out", default=str(REPO_ROOT / "results" / "analysis3"))
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--selected", default=None,
+                    help="checkpoint tag; default: the one summary.json records (run 4 has none)")
+    ap.add_argument("--exclude-non-latin", action="store_true",
+                    help="SENSITIVITY analysis: also drop usable texts containing CJK/Cyrillic/"
+                         "Arabic characters (the fine-tuned model's language drift). Not the "
+                         "pre-registered metric.")
+    ap.add_argument("--quant-suffix", default="_4bit",
+                    help="tag suffix of the quantized fine-tuned model (run 4: _4bit_merged)")
     return ap.parse_args()
 
 
@@ -222,6 +230,17 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(args.seed)
     data, sel = load(args.eval_dir)
+    sel = args.selected or sel
+    if args.exclude_non_latin:
+        from analyze_eval import NON_LATIN
+        for d in data.values():
+            for r in d["records"]:
+                if r["_a"]["reason"] is None and NON_LATIN.search(r["completion"]):
+                    r["_a"] = {**r["_a"], "reason": "non_latin"}
+            d["usable"] = [r for r in d["records"] if r["_a"]["reason"] is None]
+    q = args.quant_suffix
+    if q != "_4bit" and f"{sel}{q}" in data:      # analyse the merged model under the usual name
+        data[f"{sel}_4bit"] = data.pop(f"{sel}{q}")
     tags = tag_order(data)
     res = {"selected": sel, "models": {}}
     for t in tags:

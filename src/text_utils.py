@@ -312,6 +312,11 @@ def _is_name_part(tok):
     sentence-initial "Emily" as an adverb (observed), so a capitalized
     corpus name counts unless its POS rules it out or it is an everyday word.
     """
+    if not any(c.isalpha() for c in tok.text):
+        # spaCy sometimes tags markdown "*" as PROPN: "**Dr. John Smith**" then
+        # gave the span [John, Smith, *], so Smith looked like a middle name and
+        # the swap dropped it (pair 48, manual review 2026-10-01; lesson #17)
+        return False
     if tok.lower_ in AMBIGUOUS_NAMES:
         return tok.ent_type_ == "PERSON"
     if tok.pos_ == "PROPN":

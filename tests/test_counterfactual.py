@@ -150,3 +150,11 @@ def test_possessive_her_mistagged_as_object():
 def test_object_her_before_adjective_stays_object():
     s, _ = swap_gender("Maria read the news, leaving her unable to sleep. She sighed.", "male", "Erik")
     assert s == "Erik read the news, leaving him unable to sleep. He sighed."
+
+
+# ---- regression from the manual review of the trained pairs (2026-10-01) ---
+
+def test_markdown_bold_does_not_drop_surname():
+    # Pair 48: "**Dr. John Smith**" -> "**Dr. Linda **" (spaCy tagged "*" as PROPN).
+    s, _ = swap_gender("**Dr. John Smith** stepped out of his office. He smiled.", "female", "Linda")
+    assert s == "**Dr. Linda Smith** stepped out of her office. She smiled."

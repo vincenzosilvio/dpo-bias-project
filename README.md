@@ -1,5 +1,7 @@
 # Fine-Tuning a Small LLM against Gender-Occupation Bias: DPO Failures, a Working Fix, and What It Costs
 
+[![tests](https://github.com/<your-username>/dpo-bias-project/actions/workflows/tests.yml/badge.svg)](https://github.com/<your-username>/dpo-bias-project/actions/workflows/tests.yml)
+
 **TL;DR.** On Qwen2.5-0.5B-Instruct, with 446 counterfactual pairs and 21
 minutes / 23.5 Wh of LoRA training on one T4, **supervised fine-tuning on
 gender-swapped texts cut the gender-occupation gap in generated text from
@@ -43,7 +45,7 @@ gain.
    text. Chosen = the same text with the character's gender swapped
    (pronouns, name, title, role nouns; `counterfactual.py`). 3,600
    completions gave 446 pairs across 14 occupations (211 male→female,
-   235 female→male). There are 42 unit and regression tests.
+   235 female→male). There are 50 unit and regression tests, run on every push by GitHub Actions (no GPU needed).
 4. **Training** (`train_dpo.py`, `trl` 1.14, LoRA r=16 on all linear
    layers, 8.8M trainable parameters, 1.75%). Three objectives on the
    same pairs:
@@ -112,7 +114,10 @@ usable texts per side in the base model. Full table for all checkpoints:
   perplexity rose 2.7% (18.97 → 19.48), and **texts drifting into
   Chinese** rose from 0.4% to 4.3% (e.g. "herding all客户的头发…"). The
   usable filter does not catch the latter, so it is a real quality loss
-  that the headline numbers do not show.
+  that the headline numbers do not show. **Sensitivity check:** with
+  those texts excluded as well, the results barely move (step 100 − base:
+  −0.59 [−0.79, −0.37] on the training cell, −0.48 [−0.70, −0.26] on
+  held-out occupations; `results/analysis3_nonlatin_excluded/`).
 - **Same-prompt examples** (base vs step 100, held-out occupations):
   `results/analysis3/examples.md`.
 
@@ -278,8 +283,19 @@ for all eight models.
   general they need not: for this model scientist and surgeon skew
   female (lesson #12), and pushing such an occupation toward parity
   would raise GAP.
-- **Label noise.** Pronoun labels rely on single-character texts. The
-  manual audit of the 25-pair sample is still pending.
+- **Label noise (audited).** A review of 25 randomly sampled training
+  pairs (`results/manual_review/`) found:
+  - one character only: 22/25
+  - every pronoun refers to the occupation-holder: 24/25
+  - swap correct: 23/25
+  - chosen text fluent: 24/25
+
+  The two swap errors: in one pair, a patient who speaks also got
+  swapped; in the other, a surname was dropped next to markdown `**`,
+  which affects 1 of all 446 pairs. The review was AI-assisted (Claude),
+  with verdicts and a note per pair in the CSV, and is to be spot-checked
+  by the author. That suggests about 8% of pairs carry some label or swap
+  error, with a wide uncertainty at n = 25.
 - **Small cells.** Held-out occupations have two occupations per
   stereotype. The 4-bit comparison can only detect GAP changes of
   about 0.2 or more.
@@ -372,6 +388,25 @@ and early-stop rule, the same evaluation, selection rule and quality
 guard. This run was decided **after** runs 1 and 2 failed, and it is
 reported as such. The held-out occupations and templates were never
 used for any of these choices.
+
+## Run 4 (fixed 2026-10-01, before it was run): does 4-bit undo the fine-tuning?
+
+A focused evaluation only: no training, and the step-100 checkpoint is
+already chosen. Four models, **24 samples per prompt** (3,600 texts each,
+3× run 3), same seed and sampling settings:
+- `base`
+- `base_4bit`
+- `step100`
+- `step100_4bit_merged`: the adapter merged into fp32 first, then NF4,
+  the way a deployment would ship it (`evaluate.py --variants`)
+
+- **Primary outcome:** the interaction (the 4-bit effect on the
+  fine-tuned model minus the 4-bit effect on the base model) on train
+  occupations, all templates, with a 95% paired occupation-cluster
+  bootstrap CI. Reported whichever way it comes out.
+- **Secondary:** step100_4bit_merged − step100 on each grid cell.
+- **A bonus:** step 100 was selected on run-3 data, so its GAP on run-4
+  texts is an estimate free of the selection optimism.
 
 ## Next steps
 
@@ -651,6 +686,30 @@ code. Know these before you re-derive them:
     (mostly mixed he/she texts), and 29% more GPU energy per token on
     the T4.
 
+16. **Runs 2 and 3 (2026-09-30).** DPO + NLL (lr 1e-5 and 3e-5) drifted
+    toward first-person texts and was stopped at step 20 by the monitor
+    in both variants. The hypothesis is a first-token effect on the name
+    (see "Run 2 outcome"). Supervised fine-tuning on the chosen texts
+    alone (run 3) kept quality and cut GAP from +0.61 to +0.04 at the
+    selected step 100. Lesson: on minimal-edit counterfactual pairs,
+    start from supervised fine-tuning, and watch generations, not reward
+    accuracy.
+
+17. **Manual review of the trained pairs (2026-10-01).** 25 sampled pairs:
+    one character only 22/25, pronouns refer to the holder 24/25, swap
+    correct 23/25, chosen fluent 24/25 (`results/manual_review/`). Two
+    errors:
+    - A patient who speaks had her pronoun swapped too. This is the
+      residual multi-character risk: an unnamed second person is not
+      caught by `analyze()`.
+    - "**Dr. John Smith**" became "**Dr. Linda **". spaCy tagged the
+      markdown `*` as a proper noun, so the name span became
+      [John, Smith, *], and Smith looked like a middle name and was
+      dropped. Fixed: tokens with no letter are never name parts (with a
+      regression test). Re-running the fixed swap on all 446 trained
+      pairs changes exactly one, pair 48. The reported runs used the old
+      code.
+
 ## Evaluation design decisions (fixed before any post-fix data)
 
 Everything in this section was fixed before the evaluation results. The
@@ -713,6 +772,7 @@ dpo-bias-project/
 │   ├── eval/, eval3/         # run 1 / run 3: <model>/completions.jsonl, metrics.json, summary
 │   ├── analysis3/            # run 3 tables, examples, fig4-6
 │   ├── run2/, run3/          # training reports + monitor logs
+│   ├── manual_review/        # 25-pair audit: CSV with verdicts + the pairs to read
 │   ├── analysis/             # analysis.json, tables.md, fig1-3
 │   ├── resource_report.json  # training cost + full training log
 │   ├── split.json, dpo_pairs.jsonl

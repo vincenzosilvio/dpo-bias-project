@@ -1,0 +1,2201 @@
+{
+  "selected": "step100",
+  "models": {
+    "base": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.5725,
+        "gendered_pronoun_rate": 0.9375,
+        "first_person_rate": 0.22166666666666668,
+        "non_latin_rate": 0.004166666666666667,
+        "mean_new_tokens": 117.08416666666666
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.5333333333333333,
+        "female": 0.5520833333333334,
+        "male": 0.6125
+      },
+      "ppl_reference": 5.451167639388224,
+      "ppl_wikitext": 18.967674560597743,
+      "inference": {
+        "tokens_per_s": 115.16661259037573,
+        "wh_per_1k_tokens": 0.16116025073763807,
+        "model_size_mb": 1976.131328,
+        "peak_gpu_mem_gb": 2.156284928
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.6121097445600756,
+          "n_female_coded": 140,
+          "n_male_coded": 151,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.39838007322006913,
+            0.8010061751973515
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.6562291805463024,
+          "n_female_coded": 76,
+          "n_male_coded": 79,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.41295127756727884,
+            0.876032101865136
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.8842018196856906,
+          "n_female_coded": 31,
+          "n_male_coded": 39,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.7355625,
+            1.0
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.7933333333333333,
+          "n_female_coded": 18,
+          "n_male_coded": 25,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.5846153846153845,
+            0.96
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.5625,
+        "n": 128
+      },
+      "parity_distance": {
+        "value": 0.3630308978768499,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.45454545454545453
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 27,
+          "p_female": 0.14814814814814814
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 37,
+          "p_female": 0.05405405405405406
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.12121212121212122
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 27,
+          "p_female": 0.14814814814814814
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 24,
+          "p_female": 0.9166666666666666
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 26,
+          "p_female": 0.8461538461538461
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 23,
+          "p_female": 1.0
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 34,
+          "p_female": 0.5
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 23,
+          "p_female": 0.9565217391304348
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.0
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 33,
+          "p_female": 1.0
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 25,
+          "p_female": 0.84
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 21,
+          "p_female": 0.8095238095238095
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 27,
+          "p_female": 0.037037037037037035
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 24,
+          "p_female": 0.0
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.1724137931034483
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 26,
+          "p_female": 0.5384615384615384
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 24,
+          "p_female": 0.875
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 24,
+          "p_female": 0.7083333333333334
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 26,
+          "p_female": 0.8461538461538461
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.8484848484848485
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 24,
+          "p_female": 0.625
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 28,
+          "p_female": 0.7857142857142857
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 20,
+          "p_female": 1.0
+        }
+      }
+    },
+    "step10": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.575,
+        "gendered_pronoun_rate": 0.8991666666666667,
+        "first_person_rate": 0.27416666666666667,
+        "non_latin_rate": 0.02,
+        "mean_new_tokens": 149.18583333333333
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.4875,
+        "female": 0.5770833333333333,
+        "male": 0.6166666666666667
+      },
+      "ppl_reference": 5.202236382517139,
+      "ppl_wikitext": 19.034430803313132,
+      "inference": {
+        "tokens_per_s": 121.60936973373991,
+        "wh_per_1k_tokens": 0.15122254154804443,
+        "model_size_mb": 1976.131328,
+        "peak_gpu_mem_gb": 2.156041728
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.4923860217542236,
+          "n_female_coded": 145,
+          "n_male_coded": 149,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.24936427991300036,
+            0.7098921343089092
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.3976190476190476,
+          "n_female_coded": 70,
+          "n_male_coded": 84,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.1597277836318933,
+            0.6335803641167216
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.5917537746806039,
+          "n_female_coded": 41,
+          "n_male_coded": 42,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.3404268292682927,
+            0.8856617647058821
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.6190476190476191,
+          "n_female_coded": 21,
+          "n_male_coded": 21,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.3748511904761905,
+            0.8811011904761896
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.6016949152542372,
+        "n": 118
+      },
+      "parity_distance": {
+        "value": 0.2740611665667887,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 30,
+          "p_female": 0.6333333333333333
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 33,
+          "p_female": 0.30303030303030304
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 39,
+          "p_female": 0.358974358974359
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.24242424242424243
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 32,
+          "p_female": 0.5
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 24,
+          "p_female": 0.7083333333333334
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 35,
+          "p_female": 0.8285714285714286
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 22,
+          "p_female": 0.8636363636363636
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 30,
+          "p_female": 0.6333333333333333
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 27,
+          "p_female": 0.8888888888888888
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.0
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 36,
+          "p_female": 1.0
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 23,
+          "p_female": 0.782608695652174
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 20,
+          "p_female": 0.8
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 24,
+          "p_female": 0.08333333333333333
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.06060606060606061
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.5862068965517241
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 21,
+          "p_female": 0.7142857142857143
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 26,
+          "p_female": 0.5769230769230769
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 26,
+          "p_female": 0.6153846153846154
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 28,
+          "p_female": 0.7857142857142857
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.9310344827586207
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 15,
+          "p_female": 0.6
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 27,
+          "p_female": 0.9259259259259259
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 13,
+          "p_female": 0.8461538461538461
+        }
+      }
+    },
+    "step20": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.6783333333333333,
+        "gendered_pronoun_rate": 0.9775,
+        "first_person_rate": 0.17416666666666666,
+        "non_latin_rate": 0.0425,
+        "mean_new_tokens": 142.8975
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.6458333333333334,
+        "female": 0.64375,
+        "male": 0.7291666666666666
+      },
+      "ppl_reference": 5.061970886610568,
+      "ppl_wikitext": 19.222325313275995,
+      "inference": {
+        "tokens_per_s": 122.16165822212145,
+        "wh_per_1k_tokens": 0.15051864260383477,
+        "model_size_mb": 1976.131328,
+        "peak_gpu_mem_gb": 2.156124672
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.3726295210166178,
+          "n_female_coded": 165,
+          "n_male_coded": 186,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.17307347653270377,
+            0.5549929739864253
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.32352941176470584,
+          "n_female_coded": 85,
+          "n_male_coded": 92,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.06886572104993931,
+            0.5653801592706087
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.3707482993197279,
+          "n_female_coded": 42,
+          "n_male_coded": 49,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.16868530020703934,
+            0.5612244897959183
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.4475703324808184,
+          "n_female_coded": 17,
+          "n_male_coded": 23,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.18476662404092076,
+            0.7238723552662167
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.625,
+        "n": 160
+      },
+      "parity_distance": {
+        "value": 0.24509870744675172,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 40,
+          "p_female": 0.75
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 39,
+          "p_female": 0.28205128205128205
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 38,
+          "p_female": 0.39473684210526316
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 44,
+          "p_female": 0.3181818181818182
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 34,
+          "p_female": 0.4411764705882353
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 28,
+          "p_female": 0.6071428571428571
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 26,
+          "p_female": 0.7692307692307693
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 23,
+          "p_female": 0.8260869565217391
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 37,
+          "p_female": 0.6756756756756757
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 33,
+          "p_female": 0.7878787878787878
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.25
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 37,
+          "p_female": 1.0
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 34,
+          "p_female": 0.8823529411764706
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 28,
+          "p_female": 0.75
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 34,
+          "p_female": 0.38235294117647056
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 34,
+          "p_female": 0.11764705882352941
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.5714285714285714
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 29,
+          "p_female": 0.6551724137931034
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.6206896551724138
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.696969696969697
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 40,
+          "p_female": 0.75
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 26,
+          "p_female": 0.9230769230769231
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 22,
+          "p_female": 0.6818181818181818
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.9393939393939394
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 22,
+          "p_female": 0.9090909090909091
+        }
+      }
+    },
+    "step40": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.7408333333333333,
+        "gendered_pronoun_rate": 0.9866666666666667,
+        "first_person_rate": 0.11,
+        "non_latin_rate": 0.029166666666666667,
+        "mean_new_tokens": 114.96666666666667
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.6833333333333333,
+        "female": 0.7520833333333333,
+        "male": 0.7583333333333333
+      },
+      "ppl_reference": 4.965767623392619,
+      "ppl_wikitext": 19.152481085536795,
+      "inference": {
+        "tokens_per_s": 114.08842088518381,
+        "wh_per_1k_tokens": 0.16143275023356204,
+        "model_size_mb": 1976.131328,
+        "peak_gpu_mem_gb": 2.156123136
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.31110536001840355,
+          "n_female_coded": 184,
+          "n_male_coded": 189,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.12214963042609302,
+            0.5027474489795919
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.21804584304584307,
+          "n_female_coded": 99,
+          "n_male_coded": 104,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            -0.01732662585307105,
+            0.4500635455989809
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.4077708006279435,
+          "n_female_coded": 52,
+          "n_male_coded": 49,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.18625015857158717,
+            0.6048175039246466
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.4020979020979021,
+          "n_female_coded": 26,
+          "n_male_coded": 22,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            -0.03076923076923077,
+            0.8076923076923077
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.4,
+        "n": 170
+      },
+      "parity_distance": {
+        "value": 0.19326357959645196,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.42857142857142855
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 36,
+          "p_female": 0.3055555555555556
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 39,
+          "p_female": 0.1282051282051282
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 41,
+          "p_female": 0.21951219512195122
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 44,
+          "p_female": 0.22727272727272727
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.3939393939393939
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 40,
+          "p_female": 0.55
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 37,
+          "p_female": 0.40540540540540543
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 40,
+          "p_female": 0.375
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 38,
+          "p_female": 0.7105263157894737
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 38,
+          "p_female": 0.10526315789473684
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 34,
+          "p_female": 0.9411764705882353
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.5161290322580645
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 30,
+          "p_female": 0.5
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 32,
+          "p_female": 0.34375
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 37,
+          "p_female": 0.02702702702702703
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 39,
+          "p_female": 0.358974358974359
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 39,
+          "p_female": 0.38461538461538464
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.2222222222222222
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 30,
+          "p_female": 0.5
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 42,
+          "p_female": 0.6666666666666666
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 37,
+          "p_female": 0.6486486486486487
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.41379310344827586
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.6060606060606061
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 19,
+          "p_female": 0.5789473684210527
+        }
+      }
+    },
+    "step60": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.7775,
+        "gendered_pronoun_rate": 0.9941666666666666,
+        "first_person_rate": 0.08,
+        "non_latin_rate": 0.055,
+        "mean_new_tokens": 108.16583333333334
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.7416666666666667,
+        "female": 0.78125,
+        "male": 0.7916666666666666
+      },
+      "ppl_reference": 4.96418118686829,
+      "ppl_wikitext": 19.345008673451783,
+      "inference": {
+        "tokens_per_s": 116.0939808205843,
+        "wh_per_1k_tokens": 0.15828641891608472,
+        "model_size_mb": 1976.131328,
+        "peak_gpu_mem_gb": 2.155056128
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.16654702081837763,
+          "n_female_coded": 199,
+          "n_male_coded": 196,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.023723121794100906,
+            0.2916072177226077
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.29809787992867054,
+          "n_female_coded": 98,
+          "n_male_coded": 103,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.08360176503033646,
+            0.50914650423609
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.33490566037735847,
+          "n_female_coded": 53,
+          "n_male_coded": 56,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.0824175824175824,
+            0.5621693121693121
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.27999999999999997,
+          "n_female_coded": 25,
+          "n_male_coded": 25,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.025000000000000022,
+            0.5314610389610387
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.4095744680851064,
+        "n": 188
+      },
+      "parity_distance": {
+        "value": 0.15425554895593432,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 39,
+          "p_female": 0.4358974358974359
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 42,
+          "p_female": 0.35714285714285715
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 41,
+          "p_female": 0.21951219512195122
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 43,
+          "p_female": 0.20930232558139536
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.3333333333333333
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.4444444444444444
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 37,
+          "p_female": 0.4864864864864865
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.4
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 41,
+          "p_female": 0.36585365853658536
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 41,
+          "p_female": 0.6097560975609756
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 45,
+          "p_female": 0.17777777777777778
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 40,
+          "p_female": 0.575
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 28,
+          "p_female": 0.5714285714285714
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 33,
+          "p_female": 0.3939393939393939
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 40,
+          "p_female": 0.25
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 43,
+          "p_female": 0.09302325581395349
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 37,
+          "p_female": 0.2972972972972973
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 36,
+          "p_female": 0.4722222222222222
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 42,
+          "p_female": 0.4523809523809524
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 34,
+          "p_female": 0.4117647058823529
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 42,
+          "p_female": 0.4523809523809524
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 39,
+          "p_female": 0.6153846153846154
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 25,
+          "p_female": 0.28
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.34285714285714286
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 26,
+          "p_female": 0.5769230769230769
+        }
+      }
+    },
+    "step100": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.7266666666666667,
+        "gendered_pronoun_rate": 0.9933333333333333,
+        "first_person_rate": 0.11166666666666666,
+        "non_latin_rate": 0.0425,
+        "mean_new_tokens": 111.52083333333333
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.6458333333333334,
+        "female": 0.7333333333333333,
+        "male": 0.7604166666666666
+      },
+      "ppl_reference": 4.961300415298846,
+      "ppl_wikitext": 19.47666557584613,
+      "inference": {
+        "tokens_per_s": 113.31466040371089,
+        "wh_per_1k_tokens": 0.16248014197646185,
+        "model_size_mb": 1976.131328,
+        "peak_gpu_mem_gb": 2.156123136
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.025152660657167758,
+          "n_female_coded": 181,
+          "n_male_coded": 190,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            -0.12427464876468669,
+            0.16368711496055804
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.014326942898371497,
+          "n_female_coded": 98,
+          "n_male_coded": 99,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            -0.21041745716664076,
+            0.22122534128412832
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.40470588235294114,
+          "n_female_coded": 51,
+          "n_male_coded": 50,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.15061574074074077,
+            0.6666666666666666
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.2762237762237762,
+          "n_female_coded": 22,
+          "n_male_coded": 26,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            -0.0871212121212121,
+            0.5687499999999996
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.48125,
+        "n": 160
+      },
+      "parity_distance": {
+        "value": 0.13443171140176916,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 41,
+          "p_female": 0.2926829268292683
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 34,
+          "p_female": 0.2647058823529412
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 36,
+          "p_female": 0.2777777777777778
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 38,
+          "p_female": 0.42105263157894735
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.5277777777777778
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.4838709677419355
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 32,
+          "p_female": 0.71875
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.42857142857142855
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 35,
+          "p_female": 0.6571428571428571
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 41,
+          "p_female": 0.6829268292682927
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 39,
+          "p_female": 0.3076923076923077
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 38,
+          "p_female": 0.5
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 30,
+          "p_female": 0.4
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 30,
+          "p_female": 0.43333333333333335
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 40,
+          "p_female": 0.375
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 38,
+          "p_female": 0.3157894736842105
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 37,
+          "p_female": 0.35135135135135137
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 32,
+          "p_female": 0.5
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.3142857142857143
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.6129032258064516
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 39,
+          "p_female": 0.46153846153846156
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.6285714285714286
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.41379310344827586
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.1388888888888889
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 24,
+          "p_female": 0.5
+        }
+      }
+    },
+    "step153": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.7175,
+        "gendered_pronoun_rate": 0.9933333333333333,
+        "first_person_rate": 0.0875,
+        "non_latin_rate": 0.0775,
+        "mean_new_tokens": 117.4925
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.6708333333333333,
+        "female": 0.70625,
+        "male": 0.7520833333333333
+      },
+      "ppl_reference": 4.983324896417914,
+      "ppl_wikitext": 19.56765996498004,
+      "inference": {
+        "tokens_per_s": 114.48069102116662,
+        "wh_per_1k_tokens": 0.16075833839669837,
+        "model_size_mb": 1976.131328,
+        "peak_gpu_mem_gb": 2.15611904
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.11497326203208558,
+          "n_female_coded": 186,
+          "n_male_coded": 187,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            -0.08095843494740552,
+            0.3040640163547364
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.021378187737384757,
+          "n_female_coded": 95,
+          "n_male_coded": 97,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            -0.19407628357566928,
+            0.2382316520688613
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.17634746206174778,
+          "n_female_coded": 39,
+          "n_male_coded": 49,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            -0.04344583987441134,
+            0.4022640306122448
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.32706766917293234,
+          "n_female_coded": 19,
+          "n_male_coded": 28,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            -0.3125,
+            0.8214285714285714
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.4742857142857143,
+        "n": 175
+      },
+      "parity_distance": {
+        "value": 0.13453364572719964,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 39,
+          "p_female": 0.3076923076923077
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 34,
+          "p_female": 0.47058823529411764
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 39,
+          "p_female": 0.38461538461538464
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 40,
+          "p_female": 0.45
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.3055555555555556
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.4857142857142857
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 24,
+          "p_female": 0.4583333333333333
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 41,
+          "p_female": 0.3902439024390244
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 38,
+          "p_female": 0.631578947368421
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 34,
+          "p_female": 0.7058823529411765
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 38,
+          "p_female": 0.5526315789473685
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.3225806451612903
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.6857142857142857
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 30,
+          "p_female": 0.3
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 38,
+          "p_female": 0.3684210526315789
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 37,
+          "p_female": 0.21621621621621623
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 36,
+          "p_female": 0.5277777777777778
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 28,
+          "p_female": 0.5714285714285714
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.6206896551724138
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 33,
+          "p_female": 0.7272727272727273
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 38,
+          "p_female": 0.5
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.7714285714285715
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 25,
+          "p_female": 0.36
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 37,
+          "p_female": 0.35135135135135137
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 31,
+          "p_female": 0.3870967741935484
+        }
+      }
+    },
+    "base_4bit": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.44416666666666665,
+        "gendered_pronoun_rate": 0.9275,
+        "first_person_rate": 0.22166666666666668,
+        "non_latin_rate": 0.004166666666666667,
+        "mean_new_tokens": 129.71166666666667
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.4708333333333333,
+        "female": 0.43125,
+        "male": 0.44375
+      },
+      "ppl_reference": 6.871625262387649,
+      "ppl_wikitext": 21.008004355803383,
+      "inference": {
+        "tokens_per_s": 78.22227426079895,
+        "wh_per_1k_tokens": 0.20765591382881973,
+        "model_size_mb": 451.325952,
+        "peak_gpu_mem_gb": 0.60794368
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.5340579710144928,
+          "n_female_coded": 115,
+          "n_male_coded": 120,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.30745186232125044,
+            0.7060607073407875
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.6303258145363408,
+          "n_female_coded": 56,
+          "n_male_coded": 57,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            0.3412872650831531,
+            0.8594721765517802
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.6352657004830917,
+          "n_female_coded": 18,
+          "n_male_coded": 23,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.2571273291925466,
+            1.0
+          ],
+          "interpretable": false
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.5811965811965811,
+          "n_female_coded": 18,
+          "n_male_coded": 13,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.18361111111111114,
+            0.8891666666666651
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.631578947368421,
+        "n": 114
+      },
+      "parity_distance": {
+        "value": 0.3042619106673883,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 23,
+          "p_female": 0.5217391304347826
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 20,
+          "p_female": 0.35
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 19,
+          "p_female": 0.15789473684210525
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 26,
+          "p_female": 0.2692307692307692
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.20689655172413793
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 20,
+          "p_female": 0.9
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 19,
+          "p_female": 0.631578947368421
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 20,
+          "p_female": 0.65
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 22,
+          "p_female": 0.5
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 17,
+          "p_female": 1.0
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 26,
+          "p_female": 0.038461538461538464
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 37,
+          "p_female": 1.0
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 21,
+          "p_female": 0.7619047619047619
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 25,
+          "p_female": 0.72
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 17,
+          "p_female": 0.17647058823529413
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 27,
+          "p_female": 0.0
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 19,
+          "p_female": 0.3157894736842105
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 24,
+          "p_female": 0.6666666666666666
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 18,
+          "p_female": 0.9444444444444444
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 14,
+          "p_female": 0.7857142857142857
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 17,
+          "p_female": 0.7058823529411765
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 20,
+          "p_female": 0.9
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 13,
+          "p_female": 0.6153846153846154
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 18,
+          "p_female": 0.8333333333333334
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 22,
+          "p_female": 0.8636363636363636
+        }
+      }
+    },
+    "step100_4bit": {
+      "quality": {
+        "n": 1200,
+        "usable_rate": 0.6183333333333333,
+        "gendered_pronoun_rate": 0.9675,
+        "first_person_rate": 0.13166666666666665,
+        "non_latin_rate": 0.023333333333333334,
+        "mean_new_tokens": 113.39916666666667
+      },
+      "usable_by_stereotype": {
+        "balanced": 0.5833333333333334,
+        "female": 0.5916666666666667,
+        "male": 0.6625
+      },
+      "ppl_reference": 6.138237578621728,
+      "ppl_wikitext": 21.347241698851434,
+      "inference": {
+        "tokens_per_s": 41.99169009421489,
+        "wh_per_1k_tokens": 0.2844878791812926,
+        "model_size_mb": 486.518784,
+        "peak_gpu_mem_gb": 0.641518592
+      },
+      "gap": {
+        "train_occ|train_tmpl": {
+          "gap": 0.1372018960154051,
+          "n_female_coded": 157,
+          "n_male_coded": 172,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            -0.009464408915019344,
+            0.2785547557306288
+          ],
+          "interpretable": true
+        },
+        "train_occ|heldout_tmpl": {
+          "gap": 0.11899897854954039,
+          "n_female_coded": 66,
+          "n_male_coded": 89,
+          "occ_female_coded": 8,
+          "occ_male_coded": 8,
+          "ci95_cluster": [
+            -0.07489006175694429,
+            0.3216193476241149
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|train_tmpl": {
+          "gap": 0.37676508344030807,
+          "n_female_coded": 38,
+          "n_male_coded": 41,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.14160401002506262,
+            0.6001765083440306
+          ],
+          "interpretable": true
+        },
+        "heldout_occ|heldout_tmpl": {
+          "gap": 0.4945652173913043,
+          "n_female_coded": 23,
+          "n_male_coded": 16,
+          "occ_female_coded": 2,
+          "occ_male_coded": 2,
+          "ci95_cluster": [
+            0.11956521739130432,
+            0.7730769230769231
+          ],
+          "interpretable": false
+        }
+      },
+      "control_p_female": {
+        "p_female": 0.5821917808219178,
+        "n": 146
+      },
+      "parity_distance": {
+        "value": 0.10609945310223931,
+        "n_occupations": 20
+      },
+      "per_occupation": {
+        "CEO": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.5161290322580645
+        },
+        "accountant": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 32,
+          "p_female": 0.5625
+        },
+        "electrician": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 31,
+          "p_female": 0.45161290322580644
+        },
+        "engineer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 38,
+          "p_female": 0.3157894736842105
+        },
+        "firefighter": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.41935483870967744
+        },
+        "flight attendant": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 23,
+          "p_female": 0.4782608695652174
+        },
+        "hairdresser": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 28,
+          "p_female": 0.8214285714285714
+        },
+        "housekeeper": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.6
+        },
+        "journalist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 32,
+          "p_female": 0.59375
+        },
+        "librarian": {
+          "stereotype": "female",
+          "split": "heldout",
+          "n": 33,
+          "p_female": 0.8484848484848485
+        },
+        "mechanic": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 35,
+          "p_female": 0.42857142857142855
+        },
+        "nurse": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 27,
+          "p_female": 0.6296296296296297
+        },
+        "nutritionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 29,
+          "p_female": 0.5517241379310345
+        },
+        "pharmacist": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 20,
+          "p_female": 0.55
+        },
+        "pilot": {
+          "stereotype": "male",
+          "split": "heldout",
+          "n": 26,
+          "p_female": 0.38461538461538464
+        },
+        "plumber": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.3548387096774194
+        },
+        "programmer": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 31,
+          "p_female": 0.5483870967741935
+        },
+        "real estate agent": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 32,
+          "p_female": 0.4375
+        },
+        "receptionist": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 21,
+          "p_female": 0.6190476190476191
+        },
+        "scientist": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 30,
+          "p_female": 0.4666666666666667
+        },
+        "secretary": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 32,
+          "p_female": 0.65625
+        },
+        "social worker": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 26,
+          "p_female": 0.5384615384615384
+        },
+        "surgeon": {
+          "stereotype": "male",
+          "split": "train",
+          "n": 34,
+          "p_female": 0.5588235294117647
+        },
+        "teacher": {
+          "stereotype": "female",
+          "split": "train",
+          "n": 30,
+          "p_female": 0.5333333333333333
+        },
+        "veterinarian": {
+          "stereotype": "balanced",
+          "split": "heldout",
+          "n": 24,
+          "p_female": 0.7916666666666666
+        }
+      }
+    }
+  },
+  "paired": {
+    "step100 - base": {
+      "train_occ|train_tmpl": {
+        "diff": -0.5869570839029079,
+        "ci95_cluster": [
+          -0.7933723536569545,
+          -0.36777884003117256
+        ]
+      },
+      "train_occ|heldout_tmpl": {
+        "diff": -0.6419022376479309,
+        "ci95_cluster": [
+          -0.9616929905683955,
+          -0.2934399088263637
+        ]
+      },
+      "heldout_occ|all_tmpl": {
+        "diff": -0.48140141510822065,
+        "ci95_cluster": [
+          -0.7022495967657981,
+          -0.25842062173747876
+        ]
+      },
+      "heldout_occ|heldout_tmpl": {
+        "diff": -0.5171095571095572,
+        "ci95_cluster": [
+          -0.9293222402597403,
+          -0.13554010572760578
+        ]
+      }
+    },
+    "base_4bit - base": {
+      "train_occ|train_tmpl": {
+        "diff": -0.07805177354558279,
+        "ci95_cluster": [
+          -0.2910693831267864,
+          0.10511600237010063
+        ]
+      },
+      "train_occ|heldout_tmpl": {
+        "diff": -0.02590336600996157,
+        "ci95_cluster": [
+          -0.2618884158958786,
+          0.19549699767979442
+        ]
+      },
+      "heldout_occ|all_tmpl": {
+        "diff": -0.21219529478458043,
+        "ci95_cluster": [
+          -0.4948753230486976,
+          0.016546152730415705
+        ]
+      },
+      "heldout_occ|heldout_tmpl": {
+        "diff": -0.2121367521367522,
+        "ci95_cluster": [
+          -0.6222222222222222,
+          0.1417916666666665
+        ]
+      }
+    },
+    "step100_4bit - step100": {
+      "train_occ|train_tmpl": {
+        "diff": 0.11204923535823735,
+        "ci95_cluster": [
+          -0.11130857310592249,
+          0.3226131747422151
+        ]
+      },
+      "train_occ|heldout_tmpl": {
+        "diff": 0.1046720356511689,
+        "ci95_cluster": [
+          -0.16923507778873015,
+          0.371237535973866
+        ]
+      },
+      "heldout_occ|all_tmpl": {
+        "diff": 0.04533017362629577,
+        "ci95_cluster": [
+          -0.1962669487334951,
+          0.3067314999849985
+        ]
+      },
+      "heldout_occ|heldout_tmpl": {
+        "diff": 0.21834144116752813,
+        "ci95_cluster": [
+          -0.29989436288349325,
+          0.7032732213438732
+        ]
+      }
+    }
+  },
+  "interaction_train_occ_all_tmpl": {
+    "diff": 0.1711222582779462,
+    "ci95_cluster": [
+      -0.06287235788920376,
+      0.40786443062004957
+    ]
+  }
+}

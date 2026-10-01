@@ -84,6 +84,11 @@ def parse_args():
     ap.add_argument("--wikitext-tokens", type=int, default=40000)
     ap.add_argument("--no-4bit", action="store_true")
     ap.add_argument("--no-wikitext", action="store_true")
+    ap.add_argument("--variants", default=None,
+                    help="evaluate ONLY these, comma-separated, instead of the checkpoint sweep + "
+                         "selection: base, base_4bit, stepN, stepN_4bit (adapter on NF4 weights), "
+                         "stepN_4bit_merged (adapter merged in fp32, then quantized: the "
+                         "deployment case). Used for the focused quantization run (README, run 4).")
     return ap.parse_args()
 
 
@@ -91,9 +96,27 @@ def parse_args():
 # Models
 # ---------------------------------------------------------------------------
 
-def load_model(base_id, adapter_dir=None, four_bit=False):
+def merged_copy(base_id, adapter_dir, out_dir):
+    """Merge a LoRA adapter into the fp32 base on CPU and save it, so it can be
+    re-loaded and quantized as ONE model (what a deployment would ship)."""
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM
+    out_dir = Path(out_dir)
+    if not (out_dir / "config.json").exists():
+        m = AutoModelForCausalLM.from_pretrained(base_id, dtype=torch.float32)
+        m = PeftModel.from_pretrained(m, str(adapter_dir)).merge_and_unload()
+        m.save_pretrained(str(out_dir))
+        del m
+    return out_dir
+
+
+def load_model(base_id, adapter_dir=None, four_bit=False, merge_before_quant=False, tmp_dir=None):
     import torch
     from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+    if adapter_dir is not None and four_bit and merge_before_quant:
+        base_id = str(merged_copy(base_id, adapter_dir, Path(tmp_dir) / f"_merged_{Path(adapter_dir).name}"))
+        adapter_dir = None
     cuda = torch.cuda.is_available()
     bf16 = cuda and torch.cuda.get_device_capability(0)[0] >= 8
     kw = {}
@@ -278,7 +301,7 @@ def bias_metrics(usable, seed=0):
 # ---------------------------------------------------------------------------
 
 def evaluate_variant(tag, base_id, adapter_dir, four_bit, prompts, reference, wiki_ids,
-                     tokenizer, nlp, args, out_dir):
+                     tokenizer, nlp, args, out_dir, merge_before_quant=False):
     import torch
     from train_dpo import NvmlEnergy
     vdir = out_dir / tag
@@ -289,7 +312,9 @@ def evaluate_variant(tag, base_id, adapter_dir, four_bit, prompts, reference, wi
         return json.load(open(mfile))
     print(f"\n[{tag}] loading ({'4-bit' if four_bit else 'full precision'}"
           f"{', adapter ' + Path(adapter_dir).name if adapter_dir else ''})", flush=True)
-    model = load_model(base_id, adapter_dir, four_bit)
+    # merged copies go to the temp dir, not out_dir: out_dir is zipped and the copy is ~2 GB
+    import tempfile
+    model = load_model(base_id, adapter_dir, four_bit, merge_before_quant, tmp_dir=tempfile.gettempdir())
     size = model_size_mb(model)
     cuda = torch.cuda.is_available()
     if cuda:
@@ -430,6 +455,19 @@ def main():
 
     common = dict(prompts=prompts, reference=reference, wiki_ids=wiki_ids,
                   tokenizer=tokenizer, nlp=nlp, args=args, out_dir=out_dir)
+
+    if args.variants:
+        # Focused run: the listed variants only, no selection (it was done before).
+        results = []
+        for v in [x.strip() for x in args.variants.split(",") if x.strip()]:
+            m = re.fullmatch(r"(base|step(\d+))(_4bit(_merged)?)?", v)
+            if not m:
+                sys.exit(f"bad variant {v!r}")
+            adapter = None if m.group(1) == "base" else ckpt_dirs[int(m.group(2))]
+            results.append(evaluate_variant(v, args.model, adapter, bool(m.group(3)), **common,
+                                            merge_before_quant=bool(m.group(4))))
+        write_summary(results, None, out_dir)
+        return
     base = evaluate_variant("base", args.model, None, False, **common)
     results = [base]
     ckpts = []
