@@ -1,0 +1,26 @@
+pair_id,occupation,direction,single_character_ok,pronouns_refer_to_holder,swap_correct,chosen_fluent,notes,reviewer;
+"432,flight attendant,female->male,n,y,y,y,""Other people present (an unnamed colleague, security staff) but none gets a gendered pronoun. Odd opening 'Fluffy,' is in both texts."",""reviewed by the authour""";
+"197,firefighter,male->female,y,y,y,y,,""reviewed by the authour""";
+388,social worker,female->male,y,y,y,y,Mentions employees and a team of experts, reviewed by the authour;" no pronouns for them.,""reviewed by the authour"""
+215,nurse,female->male,y,y,y,y,Patients mentioned (them);" all he/she refer to the nurse.,""reviewed by the authour"""
+"20,engineer,male->female,y,y,y,y,,""reviewed by the authour""";
+"132,plumber,male->female,y,y,y,y,Mr. -> Ms. with surname kept.,""reviewed by the authour""";
+"261,receptionist,female->male,y,y,y,y,Mrs. -> Mr.,""reviewed by the authour""";
+"248,nurse,female->male,y,y,y,y,,""reviewed by the authour""";
+207,firefighter,male->female,y,y,y,y,Unisex name Alex kept;" him -> her correct.,""reviewed by the authour"""
+"401,nutritionist,female->male,y,y,y,y,'the sun setting behind them' is odd in both texts.,""reviewed by the authour""";
+"424,flight attendant,female->male,y,y,y,y,""her -> him (object, 'behind him') correct."",""reviewed by the authour""";
+"155,programmer,male->female,y,y,y,y,,""reviewed by the authour""";
+"244,nurse,female->male,n,n,n,y,""LABEL ERROR: the patient speaks ('I know, Sarah...') and 'as if she was telling herself' most likely refers to the patient, so the swap also changed the patient's gender."",""reviewed by the authour""";
+183,firefighter,male->female,y,y,y,y,Unisex name Alex kept;" stray asterisks in both texts.,""reviewed by the authour"""
+298,secretary,female->male,n,y,y,y,Boss and CEO present;" all gendered pronouns refer to Maggie. The original text is incoherent ('they both spent one extra minute at home').,""reviewed by the authour"""
+"111,mechanic,male->female,y,y,y,y,,""reviewed by the authour""";
+"258,receptionist,female->male,y,y,y,y,,""reviewed by the authour""";
+"71,CEO,male->female,y,y,y,y,Both texts contain a meta line ('The CEO's next sentence would likely be...').,""reviewed by the authour""";
+"144,plumber,male->female,y,y,y,y,,""reviewed by the authour""";
+"386,social worker,female->male,y,y,y,y,""'Her first name, Sarah' -> 'His first name, Eugene' correct."",""reviewed by the authour""";
+"48,CEO,male->female,y,y,n,n,""SWAP BUG: surname dropped ('**Dr. John Smith**' -> '**Dr. Linda **'). The markdown '**' ended the name span, so 'Smith' was treated as a middle name. 1 of 446 pairs affected."",""reviewed by the authour""";
+"316,teacher,female->male,y,y,y,y,Miss -> Mr.,""reviewed by the authourr""";
+"409,nutritionist,female->male,y,y,y,y,,""reviewed by the authour""";
+"128,plumber,male->female,y,y,y,y,,""reviewed by the authour""";
+"272,receptionist,female->male,y,y,y,y,,""reviewed by the authour""";
